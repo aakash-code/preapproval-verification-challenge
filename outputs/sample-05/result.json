@@ -1,0 +1,101 @@
+{
+  "request": {
+    "category": "membership",
+    "participant_name": "Miriam T.",
+    "participant_age": 35,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Sarah Klein",
+    "requested_item": "Individual Membership",
+    "provider_name": "Brooklyn Museum",
+    "url": "https://www.brooklynmuseum.org/join",
+    "fee_stated": "membership fee (amount): $80.00",
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is Health-club/Organizational Membership currently approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership provide opportunity for community inclusion?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership accommodate the individual’s health and/or safety needs?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership increase independence or substitute for human assistance?",
+        "answer": true
+      },
+      {
+        "question": "Is the membership provided exclusively toward the benefit of the participant? (not family)",
+        "answer": true
+      },
+      {
+        "question": "Is the organization open to the public and not a private/invitation-only club?",
+        "answer": true
+      }
+    ],
+    "denial_reason": null,
+    "justification": null,
+    "extraction_notes": null
+  },
+  "findings": [
+    {
+      "criterion_id": "open_to_public",
+      "criterion_text": "Organization is open to the public — not a private/invitation-only club",
+      "status": "Found",
+      "note": "The page shows public access ('sign up').",
+      "evidence_url": "https://www.brooklynmuseum.org/support/membership",
+      "evidence_files": [
+        "evidence-open-to-public-evidence-organization-is-open-to-the-pub.png"
+      ]
+    },
+    {
+      "criterion_id": "published_fee",
+      "criterion_text": "Membership fee is published",
+      "status": "Found",
+      "note": "A published price was found on the page: $10.",
+      "evidence_url": "https://www.brooklynmuseum.org/support/membership",
+      "evidence_files": [
+        "evidence-published-fee-evidence-membership-fee-is-published.png"
+      ]
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: published membership fee is consistent with the fee on the form (yearly/monthly)",
+      "status": "Not Found",
+      "note": "The website price ($10) differs from the fee on the form ($80).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "Memberships are approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Membership relates to a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": "membership fee (amount): $80.00",
+    "fee_on_website": "$10",
+    "verdict": "differs",
+    "cap_check": null
+  },
+  "pages_visited": [
+    "https://www.brooklynmuseum.org/join",
+    "https://www.brooklynmuseum.org/support/membership"
+  ],
+  "summary": "Automated rule-based check of Brooklyn Museum's website found 2 of 3 website-verifiable items, with 0 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:54 UTC"
+}
