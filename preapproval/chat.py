@@ -53,10 +53,15 @@ TOOLS: List[Dict[str, Any]] = [
 ]
 
 
-def chat_loop(report_dir: Path, client: anthropic.Anthropic | None = None) -> None:
-    client = client or anthropic.Anthropic()
+def make_dispatch(result: VerificationResult, report_dir: Path):
+    """Build the tool-dispatch function for one report.
+
+    Returns ``handle(name, args) -> str`` closing over ``result`` and
+    ``report_dir``. Shared by the CLI chat loop and the web chat route so both
+    surfaces apply edits identically. Mutates ``result`` in place and rewrites
+    the report files on ``regenerate_report``.
+    """
     report_dir = Path(report_dir)
-    result = VerificationResult.model_validate_json((report_dir / "result.json").read_text())
 
     def handle(name: str, args: Dict[str, Any]) -> str:
         if name == "update_finding":
@@ -76,13 +81,26 @@ def chat_loop(report_dir: Path, client: anthropic.Anthropic | None = None) -> No
             return f"Report re-rendered at {report_dir}/report.md and report.html"
         return f"ERROR: unknown tool {name}"
 
-    system = (
+    return handle
+
+
+def build_system_prompt(result: VerificationResult) -> str:
+    return (
         "You help a Pre-Approvals Reviewer adjust a completed website-verification report. "
         "Use the tools to apply their requested changes, then regenerate the report. "
         "Answer questions about the findings from the report state below. Keep replies short. "
         "You cannot re-run website checks here — tell them to run `review` again for that.\n\n"
         "CURRENT REPORT STATE:\n" + result.model_dump_json(indent=2)
     )
+
+
+def chat_loop(report_dir: Path, client: anthropic.Anthropic | None = None) -> None:
+    client = client or anthropic.Anthropic()
+    report_dir = Path(report_dir)
+    result = VerificationResult.model_validate_json((report_dir / "result.json").read_text())
+
+    handle = make_dispatch(result, report_dir)
+    system = build_system_prompt(result)
 
     messages: List[Dict[str, Any]] = []
     print(f"Chatting about {report_dir}. Type your request ('quit' to exit).")

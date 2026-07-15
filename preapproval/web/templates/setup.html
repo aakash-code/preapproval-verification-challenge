@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Setup needed{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>One-time setup: add your Anthropic API key</h2>
+  <p>The review assistant uses Claude to read forms and check websites. Before you can
+  start a review, the <code>{{ key_env }}</code> environment variable must be set.</p>
+  <ol>
+    <li>Get a key from the Anthropic Console.</li>
+    <li>In your terminal, set it and restart the app:
+      <pre><code>export {{ key_env }}="sk-ant-..."
+python -m preapproval serve</code></pre>
+    </li>
+    <li>Reload this page and start your review.</li>
+  </ol>
+  <p class="muted">The key is read from the environment only — it is never written to disk, logs, or reports.</p>
+  <p><a href="/">← Back to dashboard</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Review in progress{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Reviewing <span class="muted">{{ job.pdf_path.name }}</span></h2>
+  <p id="status-line" class="status status-running">Working… the assistant is reading the form and checking the website.</p>
+  <div id="console" class="console" aria-live="polite"></div>
+  <div id="error-box" class="error-box" hidden>
+    <p id="error-msg"></p>
+    <p class="muted">Full technical details are in <code>logs/app.log</code>.</p>
+  </div>
+  <p><a href="/">← Back to dashboard</a></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobId = "{{ job.id }}";
+const consoleBox = document.getElementById("console");
+const statusLine = document.getElementById("status-line");
+const errorBox = document.getElementById("error-box");
+const errorMsg = document.getElementById("error-msg");
+let shown = 0;
+
+async function poll() {
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`);
+    if (!res.ok) throw new Error("status " + res.status);
+    const data = await res.json();
+    const lines = data.log_lines || [];
+    for (let i = shown; i < lines.length; i++) {
+      const div = document.createElement("div");
+      div.className = "console-line";
+      div.textContent = lines[i];
+      consoleBox.appendChild(div);
+    }
+    if (lines.length > shown) {
+      shown = lines.length;
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+    if (data.status === "done" && data.report_name) {
+      statusLine.textContent = "Done. Opening the report…";
+      statusLine.className = "status status-done";
+      window.location.href = `/reports/${data.report_name}`;
+      return;
+    }
+    if (data.status === "failed") {
+      statusLine.textContent = "The review could not be completed.";
+      statusLine.className = "status status-failed";
+      errorMsg.textContent = data.error || "An unexpected error occurred.";
+      errorBox.hidden = false;
+      return;
+    }
+    setTimeout(poll, 1500);
+  } catch (e) {
+    statusLine.textContent = "Lost contact with the server. Retrying…";
+    setTimeout(poll, 1500);
+  }
+}
+poll();
+</script>
+{% endblock %}

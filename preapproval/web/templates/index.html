@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="intro">
+  <p>Review a purchase pre-approval application: the assistant reads the form, checks the
+  provider's website, and captures date-stamped evidence. A human always makes the final decision.</p>
+</section>
+
+<section class="card">
+  <h2>Start a review</h2>
+  <form action="/review" method="post" enctype="multipart/form-data" class="review-form">
+    <div class="field">
+      <label for="file"><strong>Upload an application form (PDF)</strong></label>
+      <input type="file" id="file" name="file" accept="application/pdf">
+    </div>
+
+    <div class="or">— or pick a sample —</div>
+
+    <div class="field">
+      <label for="sample"><strong>Use a sample form</strong></label>
+      <select id="sample" name="sample">
+        <option value="">(none)</option>
+        {% for s in samples %}
+        <option value="{{ s.filename }}">{{ s.friendly }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="btn">Start review</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Completed reviews</h2>
+  {% if reviews %}
+  <table class="reviews">
+    <thead>
+      <tr><th>Participant</th><th>Category</th><th>Provider</th><th>Review date</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in reviews %}
+      <tr>
+        <td>{{ r.participant }}</td>
+        <td>{{ r.category }}</td>
+        <td>{{ r.provider }}</td>
+        <td>{{ r.review_date }}</td>
+        <td><a href="/reports/{{ r.name }}">Open report</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No reviews yet. Start one above.</p>
+  {% endif %}
+</section>
+{% endblock %}

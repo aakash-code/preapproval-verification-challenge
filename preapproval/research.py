@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -31,6 +32,8 @@ from .models import (
 
 MODEL = "claude-opus-4-8"
 MAX_TURNS = 40
+
+logger = logging.getLogger("preapproval.research")
 
 TOOLS: List[Dict[str, Any]] = [
     {
@@ -179,8 +182,10 @@ def run_research(
     evidence_dir: Path,
     client: anthropic.Anthropic | None = None,
     headless: bool = True,
-    log=print,
+    log=None,
 ) -> VerificationResult:
+    if log is None:
+        log = logger.info
     client = client or anthropic.Anthropic()
     checklist = load_checklist(request.category.value)
     browser = EvidenceBrowser(evidence_dir, headless=headless)
@@ -190,15 +195,28 @@ def run_research(
     summary = ""
     wv_ids = {c["id"]: c["text"] for c in website_verifiable(checklist)}
 
+    _browser_tools = {"open_url", "get_page_text", "capture_full_page", "capture_evidence"}
+
     def handle_tool(name: str, args: Dict[str, Any]) -> str:
-        if name == "open_url":
-            return browser.goto(args["url"]) + "\n\n" + browser.get_page_text()
-        if name == "get_page_text":
-            return browser.get_page_text()
-        if name == "capture_full_page":
-            return browser.capture_full_page(args["label"])
-        if name == "capture_evidence":
-            return browser.capture_evidence(args["criterion_id"], args["label"], args.get("quote"))
+        if name in _browser_tools:
+            # Browser failures (timeouts, bot walls, dead links, crashes) are
+            # returned to the model as text so it can respond honestly (capture
+            # what it sees -> Needs Review) rather than crashing the loop.
+            try:
+                if name == "open_url":
+                    return browser.goto(args["url"]) + "\n\n" + browser.get_page_text()
+                if name == "get_page_text":
+                    return browser.get_page_text()
+                if name == "capture_full_page":
+                    return browser.capture_full_page(args["label"])
+                if name == "capture_evidence":
+                    return browser.capture_evidence(args["criterion_id"], args["label"], args.get("quote"))
+            except Exception as exc:  # noqa: BLE001 - surface to model, keep loop alive
+                logger.warning("Browser tool %s failed: %s", name, exc, exc_info=True)
+                return (
+                    f"TOOL ERROR: the browser could not complete {name} ({exc}). "
+                    "Capture what you can see and mark affected criteria 'Needs Review'."
+                )
         if name == "record_finding":
             cid = args["criterion_id"]
             if cid not in wv_ids:

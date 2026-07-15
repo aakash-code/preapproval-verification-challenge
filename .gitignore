@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .smoke/
 .DS_Store
+
+logs/*.log
+uploads/

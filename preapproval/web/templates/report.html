@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Report — {{ participant }}{% endblock %}
+{% block content %}
+<p><a href="/">← Back to dashboard</a></p>
+<div class="report-layout">
+  <article id="report-body" class="report-body">
+    {{ report_body | safe }}
+  </article>
+
+  <aside class="chat card">
+    <h2>Adjust in plain language</h2>
+    <p class="muted">Ask the assistant to change a finding, add a note, or update the summary.
+    You make the final decision.</p>
+    <div id="chat-log" class="chat-log" aria-live="polite"></div>
+    <form id="chat-form" class="chat-form">
+      <textarea id="chat-input" rows="2" placeholder="e.g. Mark 'published_fees' as Needs Review"></textarea>
+      <button type="submit" class="btn">Send</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const reportName = "{{ name }}";
+const chatLog = document.getElementById("chat-log");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+
+function addMsg(text, who) {
+  const div = document.createElement("div");
+  div.className = "chat-msg chat-" + who;
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+async function reloadReport() {
+  try {
+    const res = await fetch(`/reports/${reportName}`);
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const fresh = doc.getElementById("report-body");
+    if (fresh) document.getElementById("report-body").innerHTML = fresh.innerHTML;
+  } catch (e) { /* leave existing content */ }
+}
+
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  addMsg(msg, "user");
+  chatInput.value = "";
+  const pending = document.createElement("div");
+  pending.className = "chat-msg chat-assistant chat-pending";
+  pending.textContent = "…";
+  chatLog.appendChild(pending);
+  try {
+    const res = await fetch(`/api/reports/${reportName}/chat`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: msg}),
+    });
+    const data = await res.json();
+    pending.remove();
+    if (data.error) { addMsg(data.error, "assistant"); return; }
+    addMsg(data.reply || "(done)", "assistant");
+    if (data.updated) await reloadReport();
+  } catch (err) {
+    pending.remove();
+    addMsg("Sorry, the assistant could not respond.", "assistant");
+  }
+});
+</script>
+{% endblock %}

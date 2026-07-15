@@ -87,7 +87,7 @@ def render_markdown(result: VerificationResult, embed_images: bool = False) -> s
         "",
         "## Pages reviewed",
         "",
-        *[f"- {u}" for u in result.pages_visited] or ["- (none)"],
+        *([f"- {u}" for u in result.pages_visited] or ["- (none)"]),
         "",
         "## Evidence captures",
         "",
@@ -105,13 +105,14 @@ def render_markdown(result: VerificationResult, embed_images: bool = False) -> s
     return "\n".join(lines)
 
 
-def write_report(result: VerificationResult, out_dir: Path) -> None:
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "result.json").write_text(result.model_dump_json(indent=2))
-    (out_dir / "report.md").write_text(render_markdown(result))
+def render_html_body(result: VerificationResult, out_dir: Path) -> str:
+    """Render the report as an HTML fragment (no <html>/<head> wrapper).
 
-    # HTML version embeds every capture in the evidence dir (including whole-page records)
+    Embeds every capture in the evidence dir (including whole-page records that
+    are not tied to a single finding). Shared by `write_report` and the web
+    report route.
+    """
+    out_dir = Path(out_dir)
     body_md = render_markdown(result, embed_images=True)
     extra = []
     evidence_dir = out_dir / "evidence"
@@ -120,7 +121,16 @@ def write_report(result: VerificationResult, out_dir: Path) -> None:
         for p in sorted(evidence_dir.glob("*.png")):
             if p.name not in listed:
                 extra += [f"**{p.name}** (whole-page record)", "", f"![{p.name}](evidence/{p.name})", ""]
-    html_body = md.markdown(body_md + "\n" + "\n".join(extra), extensions=["tables"])
+    return md.markdown(body_md + "\n" + "\n".join(extra), extensions=["tables"])
+
+
+def write_report(result: VerificationResult, out_dir: Path) -> None:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "result.json").write_text(result.model_dump_json(indent=2))
+    (out_dir / "report.md").write_text(render_markdown(result))
+
+    html_body = render_html_body(result, out_dir)
     (out_dir / "report.html").write_text(
         f"<!doctype html><meta charset='utf-8'><title>Pre-Approval Review — "
         f"{result.request.participant_name}</title><style>{_CSS}</style><body>{html_body}"

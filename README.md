@@ -25,23 +25,39 @@ honest "Not Found / Needs Review" results are expected and correct. Every
 
 *(This repo was created from the challenge template — the original challenge
 instructions are preserved in `CHALLENGE.md`, the full brief in `docs/`, and
-the ten sample forms in `samples/`.)*
+the ten sample forms in `samples/.`)*
+
+**Project documentation**: See `docs/project/` for [ARCHITECTURE.md](docs/project/ARCHITECTURE.md), [GROUND_RULES.md](docs/project/GROUND_RULES.md), and [USER_GUIDE.md](docs/project/USER_GUIDE.md).
 
 ## Running it (step by step)
 
 You need: **Python 3.10+** and an **Anthropic API key**
 ([console.anthropic.com](https://console.anthropic.com)).
 
+### Setup (one-time)
+
 ```bash
-# 1. One-time setup
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
-
-# 2. Your API key
 export ANTHROPIC_API_KEY=sk-ant-...
+```
 
-# 3. Review an application (or several)
+### Web app (recommended)
+
+Start the local web application:
+
+```bash
+.venv/bin/python -m preapproval serve
+```
+
+Open http://127.0.0.1:8000 in your browser. Upload a form or pick a sample, watch the live progress, read the report, and use the chat box to adjust findings in plain language. See [USER_GUIDE.md](docs/project/USER_GUIDE.md) for non-technical reviewers.
+
+### Command line
+
+Review an application (or several) from the terminal:
+
+```bash
 .venv/bin/python -m preapproval review "samples/Sample-01---Community-Class-GallopNYC.pdf"
 ```
 
@@ -82,8 +98,18 @@ preapproval/
   browser.py     Playwright wrapper — navigation, date-stamp banner, highlight-and-capture
   report.py      renders report.md / report.html / result.json
   chat.py        plain-language report revision
-  cli.py         entry point
+  cli.py         entry point (review / chat / serve commands)
+  logging_config.py  console + rotating file handler
+  errors.py      PipelineError for user-friendly error messages
+  web/           FastAPI local web UI (dashboard, upload, job progress, report viewer, chat)
+    app.py       routes, template rendering, job queue
+    jobs.py      background job management
+    templates/   HTML templates (base, index, job, report, error, setup)
+    static/      CSS and JavaScript
 config/checklists/*.yaml   the seven category checklists (the domain knowledge)
+logs/            runtime logs (gitignored, rotating)
+outputs/         report packages, one directory per reviewed application (gitignored)
+tests/           unit and integration tests
 ```
 
 **Model:** `claude-opus-4-8` with adaptive thinking, via the Anthropic Python
