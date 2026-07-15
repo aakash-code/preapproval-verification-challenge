@@ -1,0 +1,135 @@
+{
+  "request": {
+    "category": "transition_program",
+    "participant_name": "Baruch Z.",
+    "participant_age": 21,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Sarah Klein",
+    "requested_item": "LaGuardia Community College – Adult & Continuing Education",
+    "provider_name": "LaGuardia Community College – Adult & Continuing Education",
+    "url": "https://www.laguardia.edu/ace/",
+    "fee_stated": "fee per course: $300 per course",
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is the Transition program currently approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Has the individual already completed their educational program?",
+        "answer": true
+      },
+      {
+        "question": "Does the program have published fees?",
+        "answer": true
+      },
+      {
+        "question": "Is the program a noncredit-bearing transition program?",
+        "answer": true
+      },
+      {
+        "question": "Does the coursework address the individual’s valued outcome?",
+        "answer": true
+      },
+      {
+        "question": "Does the coursework address skill-building and employment outcomes?",
+        "answer": true
+      },
+      {
+        "question": "Are all staff/volunteers/trainers screened for criminal background & excluded-provider status? (letter)",
+        "answer": true
+      },
+      {
+        "question": "Is the program provided in an OPWDD-certified location?",
+        "answer": false
+      },
+      {
+        "question": "Can the program be funded by ACCES-VR, IDEA, or any other source?",
+        "answer": false
+      }
+    ],
+    "denial_reason": null,
+    "justification": null,
+    "extraction_notes": "No explicit item/class label found; using the provider name as the requested item."
+  },
+  "findings": [
+    {
+      "criterion_id": "published_fees",
+      "criterion_text": "Published fees exist",
+      "status": "Needs Review",
+      "note": "No price was visible on the page (sites often block automated readers) — please confirm the published fee manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_cap",
+      "criterion_text": "Fee sanity-check: ≤ $350 per course / ≤ $800 per month",
+      "status": "Found",
+      "note": "Stated fee(s) $300 are within the program caps (max $800).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "noncredit_skill_building",
+      "criterion_text": "Program is noncredit-bearing and oriented to skill-building / employment outcomes",
+      "status": "Found",
+      "note": "The page describes noncredit skill-building ('continuing education').",
+      "evidence_url": "https://laguardia.ce.cuny.edu/search.cfm",
+      "evidence_files": [
+        "evidence-noncredit-skill-building-evidence-program-is-noncredit-bearing-an.png"
+      ]
+    },
+    {
+      "criterion_id": "not_opwdd_location",
+      "criterion_text": "Program is NOT in an OPWDD-certified location",
+      "status": "Found",
+      "note": "No OPWDD-facility language found on the page (inferred from absence).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: published fee is consistent with the fee on the form",
+      "status": "Needs Review",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "staff_screening",
+      "criterion_text": "Staff background-screening is proven by a letter, not the website — needs document",
+      "status": "Internal — not website-verifiable",
+      "note": "Flag as \"needs document\" for the reviewer.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "Transition program is approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Program relates to a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": "fee per course: $300 per course",
+    "fee_on_website": "not published",
+    "verdict": "not published",
+    "cap_check": "Stated fee(s) $300 are within the program caps (max $800)."
+  },
+  "pages_visited": [
+    "https://www.laguardia.edu/ce/home/",
+    "https://laguardia.ce.cuny.edu/search.cfm"
+  ],
+  "summary": "Automated rule-based check of LaGuardia Community College – Adult & Continuing Education's website found 3 of 5 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:50 UTC"
+}
