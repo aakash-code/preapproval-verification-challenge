@@ -1,0 +1,120 @@
+{
+  "request": {
+    "category": "hri",
+    "participant_name": "Esther G.",
+    "participant_age": 33,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Sarah Klein",
+    "requested_item": "Laptop computer",
+    "provider_name": "amazon.com",
+    "url": "https://www.amazon.com/dp/B08N5WRWNW",
+    "fee_stated": null,
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is Household-Related Items approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Is the individual over 18?",
+        "answer": true
+      },
+      {
+        "question": "Is the item related to a need or goal identified in the Life Plan?",
+        "answer": true
+      },
+      {
+        "question": "Will the item increase independence, or substitute for human assistance?",
+        "answer": true
+      },
+      {
+        "question": "Does the item increase safety of the participant in their home environment?",
+        "answer": true
+      },
+      {
+        "question": "Is the item exclusively needed for the participant?",
+        "answer": true
+      },
+      {
+        "question": "Does the item increase the participant’s health and safety?",
+        "answer": true
+      },
+      {
+        "question": "Does the individual live in their own home? (for Household support only)",
+        "answer": true
+      },
+      {
+        "question": "Was the same item bought already in this budget year?",
+        "answer": false
+      },
+      {
+        "question": "Can the item be funded through other sources?",
+        "answer": false
+      }
+    ],
+    "denial_reason": null,
+    "justification": "Esther would like a laptop to access online classes and communicate with family.",
+    "extraction_notes": "Safety features: N/A No 'Name of Provider/Vendor' label on this form; derived provider 'amazon.com' from the item link."
+  },
+  "findings": [
+    {
+      "criterion_id": "item_exists",
+      "criterion_text": "The item exists at the linked page, with a visible price",
+      "status": "Needs Review",
+      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "not_excluded",
+      "criterion_text": "Item is plausibly NOT on the HRI exclusion list (not a cell phone, computer, vehicle, medical device, pill dispenser)",
+      "status": "Needs Review",
+      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "safety_features",
+      "criterion_text": "Safety features described on the form are supported by the product page",
+      "status": "Needs Review",
+      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: listed price is consistent with the price on the form, and within the $1,500/budget-year cap",
+      "status": "Needs Review",
+      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "HRI is approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Item supports a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": null,
+    "fee_on_website": null,
+    "verdict": "not checked",
+    "cap_check": null
+  },
+  "pages_visited": [
+    "https://www.amazon.com/dp/B08N5WRWNW"
+  ],
+  "summary": "Automated rule-based check of amazon.com's website found 0 of 4 website-verifiable items, with 4 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:54 UTC"
+}

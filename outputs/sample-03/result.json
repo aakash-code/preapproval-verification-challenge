@@ -1,0 +1,106 @@
+{
+  "request": {
+    "category": "coaching",
+    "participant_name": "Chaim D.",
+    "participant_age": 28,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Michael Ross",
+    "requested_item": "92NY – Parenting & Family Center",
+    "provider_name": "92NY – Parenting & Family Center",
+    "url": "https://www.92ny.org/parenting-and-family",
+    "fee_stated": "fee per class: $50; fee per course: $400",
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is coaching education currently approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Is the individual over 18?",
+        "answer": true
+      },
+      {
+        "question": "Does the coaching address the individual’s goals being worked on in the LP?",
+        "answer": true
+      },
+      {
+        "question": "Can the coaching program be funded by other public programs?",
+        "answer": false
+      }
+    ],
+    "denial_reason": null,
+    "justification": null,
+    "extraction_notes": "No explicit item/class label found; using the provider name as the requested item."
+  },
+  "findings": [
+    {
+      "criterion_id": "published_fees",
+      "criterion_text": "Published fees exist for the course/class",
+      "status": "Needs Review",
+      "note": "No price was visible on the page (sites often block automated readers) — please confirm the published fee manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_cap",
+      "criterion_text": "Fee sanity-check: ≤ $55 per group class / ≤ $111 per private class; program capped at $500/year",
+      "status": "Found",
+      "note": "Stated fee(s) $50, $400 are within the program caps (max $500).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "educational_content",
+      "criterion_text": "Content is a genuine educational/coaching opportunity (not lodging/travel, which is excluded)",
+      "status": "Found",
+      "note": "The page describes an educational/coaching opportunity ('class').",
+      "evidence_url": "https://www.92ny.org/parenting-and-family",
+      "evidence_files": [
+        "evidence-educational-content-evidence-content-is-a-genuine-educationa.png"
+      ]
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: published fee is consistent with the fee on the form",
+      "status": "Needs Review",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "adults_only",
+      "criterion_text": "Attendee is an adult (18+) — coaching is for parents/spouse",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "Coaching is approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Course relates to a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": "fee per class: $50; fee per course: $400",
+    "fee_on_website": "not published",
+    "verdict": "not published",
+    "cap_check": "Stated fee(s) $50, $400 are within the program caps (max $500)."
+  },
+  "pages_visited": [
+    "https://www.92ny.org/parenting-and-family"
+  ],
+  "summary": "Automated rule-based check of 92NY – Parenting & Family Center's website found 2 of 4 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:54 UTC"
+}

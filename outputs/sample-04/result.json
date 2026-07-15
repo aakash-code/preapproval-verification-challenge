@@ -1,0 +1,96 @@
+{
+  "request": {
+    "category": "membership",
+    "participant_name": "Rivka S.",
+    "participant_age": 31,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Michael Ross",
+    "requested_item": "Classic Gym Membership",
+    "provider_name": "Planet Fitness",
+    "url": "https://www.planetfitness.com/gyms",
+    "fee_stated": "membership fee (amount): $15.00",
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is Health-club/Organizational Membership currently approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership provide opportunity for community inclusion?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership accommodate the individual’s health and/or safety needs?",
+        "answer": true
+      },
+      {
+        "question": "Does the membership increase independence or substitute for human assistance?",
+        "answer": true
+      },
+      {
+        "question": "Is the membership provided exclusively toward the benefit of the participant? (not family)",
+        "answer": true
+      },
+      {
+        "question": "Is the organization open to the public and not a private/invitation-only club?",
+        "answer": true
+      }
+    ],
+    "denial_reason": null,
+    "justification": null,
+    "extraction_notes": null
+  },
+  "findings": [
+    {
+      "criterion_id": "open_to_public",
+      "criterion_text": "Organization is open to the public — not a private/invitation-only club",
+      "status": "Needs Review",
+      "note": "Could not find clear language about public access — please check manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "published_fee",
+      "criterion_text": "Membership fee is published",
+      "status": "Needs Review",
+      "note": "No price was visible on the page (sites often block automated readers) — please confirm the published fee manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: published membership fee is consistent with the fee on the form (yearly/monthly)",
+      "status": "Needs Review",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "Memberships are approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Membership relates to a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": "membership fee (amount): $15.00",
+    "fee_on_website": "not published",
+    "verdict": "not published",
+    "cap_check": null
+  },
+  "pages_visited": [
+    "https://www.planetfitness.com/gyms/"
+  ],
+  "summary": "Automated rule-based check of Planet Fitness's website found 0 of 3 website-verifiable items, with 3 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:50 UTC"
+}

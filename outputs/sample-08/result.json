@@ -1,0 +1,104 @@
+{
+  "request": {
+    "category": "otps",
+    "participant_name": "Shira L.",
+    "participant_age": 27,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Michael Ross",
+    "requested_item": "Weighted blanket (therapeutic)",
+    "provider_name": "amazon.com",
+    "url": "https://www.amazon.com/dp/B075YQXZLK",
+    "fee_stated": null,
+    "valued_outcome": null,
+    "form_answers": [
+      {
+        "question": "Is ‘Other goods & services that increase independence’ approved in the budget?",
+        "answer": false
+      },
+      {
+        "question": "Is ‘Other goods & services that increase health and safety’ approved in the budget?",
+        "answer": true
+      },
+      {
+        "question": "Is the item related to a need or goal identified in the Life Plan?",
+        "answer": true
+      },
+      {
+        "question": "Will the item increase the independence and/or health and safety of the individual?",
+        "answer": true
+      },
+      {
+        "question": "Is the item exclusively needed for the participant?",
+        "answer": true
+      },
+      {
+        "question": "Is the item on the OTPS exclusion list? (see guidelines)",
+        "answer": false
+      },
+      {
+        "question": "Can the item be funded through other sources?",
+        "answer": false
+      },
+      {
+        "question": "Was the same item bought already in this budget year?",
+        "answer": false
+      }
+    ],
+    "denial_reason": null,
+    "justification": "A weighted blanket helps Shira with sensory regulation and sleep, supporting her health and safety at home.",
+    "extraction_notes": "Safety features: Breathable fabric; evenly distributed weight; sized to the individual No 'Name of Provider/Vendor' label on this form; derived provider 'amazon.com' from the item link."
+  },
+  "findings": [
+    {
+      "criterion_id": "item_exists",
+      "criterion_text": "The item exists at the linked page, with a visible price",
+      "status": "Needs Review",
+      "note": "Could not confirm the item and price on the page — please review the listing.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "not_excluded",
+      "criterion_text": "Item is plausibly NOT on the OTPS exclusion list (not cable TV, common household supplies, rental cars, legal fees, co-pays, experimental therapies)",
+      "status": "Found",
+      "note": "The requested item does not match anything on the exclusion list.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: listed price is consistent with the price on the form, and within the $3,000/budget-year cap",
+      "status": "Needs Review",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "OTPS is approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Item supports a goal in the participant's Life Plan",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": null,
+    "fee_on_website": "not published",
+    "verdict": "not published",
+    "cap_check": null
+  },
+  "pages_visited": [
+    "https://www.amazon.com/dp/B075YQXZLK"
+  ],
+  "summary": "Automated rule-based check of amazon.com's website found 1 of 3 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:54 UTC"
+}
