@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ..logging_config import REPO_ROOT, setup_logging
-from ..models import VerificationResult
+from ..models import VerificationResult, format_category
 from . import jobs
 
 logger = logging.getLogger("preapproval.web")
@@ -70,7 +70,7 @@ def _list_completed_reviews() -> List[Dict[str, str]]:
             {
                 "name": result_json.parent.name,
                 "participant": r.participant_name,
-                "category": r.category.value.replace("_", " ").title(),
+                "category": format_category(r.category),
                 "provider": r.provider_name,
                 "review_date": result.review_timestamp,
             }
@@ -120,6 +120,7 @@ def create_app() -> FastAPI:
                 {
                     "samples": _list_samples(),
                     "reviews": _list_completed_reviews(),
+                    "key_set": key_is_set(),
                 },
             )
         except Exception:  # noqa: BLE001
@@ -129,13 +130,15 @@ def create_app() -> FastAPI:
     # ---- start a review --------------------------------------------------
 
     @app.post("/review")
-    async def review(request: Request, file: UploadFile | None = None, sample: str = Form(default="")):
+    async def review(
+        request: Request,
+        file: UploadFile | None = None,
+        sample: str = Form(default=""),
+        engine: str = Form(default="auto"),
+    ):
         try:
-            if not key_is_set():
-                return templates.TemplateResponse(
-                    request, "setup.html", {"key_env": KEY_ENV}, status_code=200
-                )
-
+            # Validate the PDF selection first, so a bogus sample is rejected
+            # before any engine/key logic (same as before).
             pdf_path: Optional[Path] = None
 
             if sample:
@@ -158,7 +161,16 @@ def create_app() -> FastAPI:
             else:
                 return error_page(request, "Choose a sample or upload a PDF first.", status_code=400)
 
-            job = jobs.start_review_job(pdf_path, OUTPUTS_DIR)
+            # Only require a key when the review will actually use the AI engine.
+            from ..engine import resolve_engine
+
+            resolved = resolve_engine(engine)
+            if resolved == "ai" and not key_is_set():
+                return templates.TemplateResponse(
+                    request, "setup.html", {"key_env": KEY_ENV}, status_code=200
+                )
+
+            job = jobs.start_review_job(pdf_path, OUTPUTS_DIR, engine=engine)
             return RedirectResponse(url=f"/jobs/{job.id}", status_code=303)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to start review")

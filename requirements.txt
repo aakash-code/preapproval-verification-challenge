@@ -1,4 +1,5 @@
 anthropic>=0.116
+pdfplumber>=0.11
 playwright>=1.45
 pyyaml>=6.0
 markdown>=3.5

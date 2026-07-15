@@ -25,16 +25,28 @@ def _out_name(pdf: Path) -> str:
     return m.group(1) if m else re.sub(r"[^a-z0-9]+", "-", pdf.stem.lower()).strip("-")
 
 
-def _run_review(pdf: Path, out_dir: Path, client, headed: bool) -> None:
-    """Run the three pipeline stages, wrapping each in a friendly PipelineError."""
+def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str) -> None:
+    """Run the three pipeline stages, wrapping each in a friendly PipelineError.
+
+    ``engine`` is the resolved engine ("ai" or "automation"). The "automation"
+    path uses no Anthropic client at all.
+    """
     from .errors import PipelineError
-    from .extract import extract_request
     from .report import write_report
-    from .research import run_research
+
+    logger.info("      Engine: %s (%s)", engine,
+                "Claude / AI" if engine == "ai" else "deterministic rules, no API key")
 
     logger.info("[1/3] Reading the application form...")
     try:
-        request = extract_request(pdf, client)
+        if engine == "ai":
+            from .extract import extract_request
+            request = extract_request(pdf, client)
+        else:
+            from .automation.extract_rules import extract_request_rules
+            request = extract_request_rules(pdf)
+    except PipelineError:
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.exception("Extraction failed for %s", pdf.name)
         raise PipelineError(
@@ -52,7 +64,12 @@ def _run_review(pdf: Path, out_dir: Path, client, headed: bool) -> None:
 
     logger.info("[2/3] Researching the website and capturing evidence...")
     try:
-        result = run_research(request, out_dir / "evidence", client, headless=not headed, log=logger.info)
+        if engine == "ai":
+            from .research import run_research
+            result = run_research(request, out_dir / "evidence", client, headless=not headed, log=logger.info)
+        else:
+            from .automation.research_rules import run_research_rules
+            result = run_research_rules(request, out_dir / "evidence", headless=not headed, log=logger.info)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Website research failed for %s", pdf.name)
         raise PipelineError(
@@ -68,6 +85,14 @@ def _run_review(pdf: Path, out_dir: Path, client, headed: bool) -> None:
             "The review finished but the report could not be saved.", original=exc
         ) from exc
 
+    # Record the review in the audit DB. A DB failure must never fail the run.
+    try:
+        from . import db
+        review_name = _out_name(pdf)
+        db.save_review(result, out_dir, review_name, engine)
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not write the audit-DB record for %s", pdf.name)
+
     logger.info("DONE  → %s/report.md  (+ report.html, result.json, evidence/)", out_dir)
 
 
@@ -79,6 +104,11 @@ def main(argv=None) -> int:
     p_review.add_argument("pdfs", nargs="+", type=Path)
     p_review.add_argument("--out", type=Path, default=Path("outputs"), help="Output root (default: outputs/)")
     p_review.add_argument("--headed", action="store_true", help="Show the browser window while researching")
+    p_review.add_argument(
+        "--engine", choices=["auto", "ai", "automation"], default="auto",
+        help="Review engine: 'ai' (Claude, needs ANTHROPIC_API_KEY), 'automation' "
+             "(deterministic rules, no key), or 'auto' (default: ai if a key is set, else automation)",
+    )
 
     p_chat = sub.add_parser("chat", help="Adjust a completed report in plain language")
     p_chat.add_argument("report_dir", type=Path, help="An output directory containing result.json")
@@ -103,19 +133,33 @@ def main(argv=None) -> int:
         uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="info")
         return 0
 
-    if not os.environ.get(_KEY_ENV):
-        logger.error("ERROR: set %s first (see README).", _KEY_ENV)
-        return 2
-
-    import anthropic
-
-    client = anthropic.Anthropic()
-
+    # `chat` always uses Claude; it still requires a key.
     if args.cmd == "chat":
+        if not os.environ.get(_KEY_ENV):
+            logger.error("ERROR: set %s first (see README).", _KEY_ENV)
+            return 2
+        import anthropic
+
         from .chat import chat_loop
 
-        chat_loop(args.report_dir, client)
+        chat_loop(args.report_dir, anthropic.Anthropic())
         return 0
+
+    # `review`: only require a key when the resolved engine is "ai".
+    from .engine import resolve_engine
+
+    engine = resolve_engine(args.engine)
+    if engine == "ai" and not os.environ.get(_KEY_ENV):
+        logger.error("ERROR: --engine ai needs %s. Use --engine automation to run without a key.", _KEY_ENV)
+        return 2
+
+    client = None
+    if engine == "ai":
+        import anthropic
+
+        client = anthropic.Anthropic()
+
+    logger.info("Using the %s engine.", engine)
 
     from .errors import PipelineError
 
@@ -128,7 +172,7 @@ def main(argv=None) -> int:
         out_dir = args.out / _out_name(pdf)
         logger.info("\n=== %s → %s ===", pdf.name, out_dir)
         try:
-            _run_review(pdf, out_dir, client, args.headed)
+            _run_review(pdf, out_dir, client, args.headed, engine)
         except PipelineError as e:
             failures += 1
             logger.error("FAILED on %s: %s", pdf.name, e.user_message)

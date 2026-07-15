@@ -58,6 +58,26 @@ Data at rest: `outputs/<application>/` (report package + `evidence/`),
 7. **Human review (§10)** — the reviewer reads, optionally adjusts findings
    in plain language (chat), and makes the approve/deny decision themselves.
 
+## Dual engine design
+
+Engine selection is resolved via `engine.py:resolve_engine()`: if `--engine ai` is requested or `auto` is used with `ANTHROPIC_API_KEY` set, the AI engine runs; otherwise the automation engine runs. Both are accessed through the same CLI/web entry points.
+
+**AI engine** (`research.py`): Claude drives the browser, decides where to look, and judges ambiguous cases. Requires an API key; more nuanced judgment on messy websites.
+
+**Automation engine** (`automation/`): Deterministic keyword and price-pattern matching (keyword detection in HTML, regex patterns for fees and schedules, Playwright navigation). Zero API key required; always returns the same result for the same input. When uncertain, conservatively marks criteria "Needs Review" rather than guessing.
+
+Extraction differs too: the AI engine reads the PDF with Claude; the automation engine parses it with `pdfplumber` + label-matching rules (`automation/extract_rules.py`). Both produce the same `ApplicationRequest` / `VerificationResult` Pydantic models, so `report.py`, `chat.py`, and the web dashboard do not know or care which engine produced the results. Both populate the audit database. The choice is transparent to users — reviewers see the same report format either way.
+
+## Evidence database
+
+Every review (regardless of engine) is recorded in `data/preapproval.db` (SQLite, included in stdlib — zero additional dependencies). Three tables track the audit trail:
+
+- **reviews**: one row per completed review (category, provider, URL, fee comparison, verdict, timestamp, engine used).
+- **findings**: one row per criterion (criterion id/text, status, note, evidence URL).
+- **evidence**: one row per captured file (name, sha256 hash, capture time, kind: "fullpage" or "targeted"). Hashes allow integrity verification against disk.
+
+Entry points: `db.list_reviews()` returns all reviews (newest first); `db.get_evidence_for_review(review_name)` returns evidence rows for a given review. The database complements (not replaces) the file-based report package. A write failure never crashes a review — it is best-effort, not a hard dependency.
+
 ## Error handling & logging
 
 - Typed `PipelineError` wraps each stage; users see a plain-language message,
@@ -98,8 +118,12 @@ unchanged.
 
 ## Model responsibilities
 
-In-product: `claude-opus-4-8` (adaptive thinking) for extraction, research,
-and chat — judgment quality and evidence integrity dominate cost.
+In-product: `claude-opus-4-8` (adaptive thinking) powers the **AI engine**
+(extraction, research, and chat) when `ANTHROPIC_API_KEY` is set — judgment
+quality and evidence integrity dominate cost there. The **automation engine**
+uses no model at all — deterministic rules only — so the tool is fully usable
+with zero API key or spend; chat (plain-language report revision) still
+requires the AI engine, since it inherently needs a model.
 Development process: Fable 5 designs architecture/security/workflow and
 reviews; Opus 4.8 / Sonnet 5 implement; Haiku 4.5 writes user documentation
 (see `GROUND_RULES.md`).

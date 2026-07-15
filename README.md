@@ -31,8 +31,7 @@ the ten sample forms in `samples/.`)*
 
 ## Running it (step by step)
 
-You need: **Python 3.10+** and an **Anthropic API key**
-([console.anthropic.com](https://console.anthropic.com)).
+You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](https://console.anthropic.com)) is optional — the tool works without one using the deterministic automation engine; it is only needed for the AI-assisted engine and the plain-language chat feature.
 
 ### Setup (one-time)
 
@@ -40,7 +39,7 @@ You need: **Python 3.10+** and an **Anthropic API key**
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=sk-ant-...  # Optional; only needed for the AI-assisted engine and chat
 ```
 
 ### Web app (recommended)
@@ -51,7 +50,7 @@ Start the local web application:
 .venv/bin/python -m preapproval serve
 ```
 
-Open http://127.0.0.1:8000 in your browser. Upload a form or pick a sample, watch the live progress, read the report, and use the chat box to adjust findings in plain language. See [USER_GUIDE.md](docs/project/USER_GUIDE.md) for non-technical reviewers.
+Open http://127.0.0.1:8000 in your browser. Upload a form or pick a sample, watch the live progress, read the report, and use the chat box to adjust findings in plain language. On the dashboard, use the **engine dropdown** (Automatic vs AI-assisted) to choose the review method. See [USER_GUIDE.md](docs/project/USER_GUIDE.md) for non-technical reviewers.
 
 ### Command line
 
@@ -71,8 +70,7 @@ outputs/sample-01/
   evidence/      ← date-stamped screenshots + page PDFs
 ```
 
-Useful flags: `--out DIR` changes the output root; `--headed` shows the
-browser window while the agent works (fun to watch).
+Useful flags: `--out DIR` changes the output root; `--headed` shows the browser window while the agent works (fun to watch); `--engine {auto,ai,automation}` (default `auto`) selects the review engine — `ai` uses Claude (requires `ANTHROPIC_API_KEY`), `automation` uses deterministic rules (no key needed), and `auto` picks based on whether the key is set.
 
 ### Talking to the tool
 
@@ -93,6 +91,8 @@ same PDF again.
 ```
 preapproval/
   extract.py     PDF → structured request (Claude + structured outputs, Pydantic-validated)
+  engine.py      engine resolution: picks ai or automation based on ANTHROPIC_API_KEY
+  db.py          SQLite audit database (reviews, findings, evidence tables with sha256 integrity)
   checklists.py  loads config/checklists/*.yaml (supports `inherits`, e.g. appeals extend community classes)
   research.py    the agent loop: Claude + browser tools (open_url, capture_*, record_finding, finish_review)
   browser.py     Playwright wrapper — navigation, date-stamp banner, highlight-and-capture
@@ -101,12 +101,16 @@ preapproval/
   cli.py         entry point (review / chat / serve commands)
   logging_config.py  console + rotating file handler
   errors.py      PipelineError for user-friendly error messages
+  automation/    deterministic rule-based engine (no API key required)
+    extract_rules.py   PDF → ApplicationRequest via keyword/layout rules
+    research_rules.py  website checking via pattern matching and Playwright
   web/           FastAPI local web UI (dashboard, upload, job progress, report viewer, chat)
     app.py       routes, template rendering, job queue
     jobs.py      background job management
     templates/   HTML templates (base, index, job, report, error, setup)
     static/      CSS and JavaScript
 config/checklists/*.yaml   the seven category checklists (the domain knowledge)
+data/            SQLite audit database preapproval.db (gitignored)
 logs/            runtime logs (gitignored, rotating)
 outputs/         report packages, one directory per reviewed application (gitignored)
 tests/           unit and integration tests
@@ -124,6 +128,18 @@ when it has proof, and when to stop and say "a human must check". The tool
 layer keeps it honest: `record_finding` rejects unknown criteria,
 `finish_review` refuses to complete until every criterion has a finding, and
 any criterion left unresolved is force-marked **Needs Review**, never guessed.
+
+### Two review engines
+
+**Automatic** (rule-based): A deterministic keyword and price-pattern matcher that runs via Playwright, with zero API key required. It follows the same honesty guarantee as the AI engine — when uncertain, it leans "Needs Review" rather than guessing.
+
+**AI-assisted** (Claude): The original engine using Claude's judgment to read websites like a human reviewer would. Requires `ANTHROPIC_API_KEY`. Better for nuanced or ambiguous cases.
+
+Both engines produce identical report formats and both populate the audit database.
+
+### Evidence database
+
+Every review is recorded in `data/preapproval.db` (SQLite, zero additional dependencies), with three tables: `reviews` (the request and rate comparison), `findings` (one row per criterion), and `evidence` (captured files with sha256 integrity hashes). Use `preapproval.db.list_reviews()` and `get_evidence_for_review(review_name)` as the query entry points. A database write failure never crashes a review — it is a best-effort audit trail, not a hard dependency.
 
 ## Adding or changing a form/checklist
 

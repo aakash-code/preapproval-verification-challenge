@@ -11,6 +11,8 @@ This tool assists pre-approval reviewers by automatically checking provider webs
 5. **You review the report**, which shows what was found, what wasn't found, and what requires your manual check.
 6. **You make the final decision** on approval or denial. The tool assists but never decides.
 
+**No API key required to start.** The tool works out of the box using built-in automatic checking. On the dashboard, you'll see an engine dropdown — **Automatic** (fast, rule-based, no cost) is the default; **AI-assisted** (smarter reading, like a person, requires a paid API key) is available if your IT team sets it up.
+
 ## One-time setup
 
 Ask your IT contact to run these commands on the computer where you'll review forms:
@@ -21,8 +23,7 @@ python3 -m venv .venv
 .venv/bin/playwright install chromium
 ```
 
-Then, also one time:
-- Ask IT to set the environment variable `ANTHROPIC_API_KEY` to your API key (get one from your administrator).
+The tool is now ready to use. (Optional: if your organization wants to use AI-assisted checking, ask IT to set the environment variable `ANTHROPIC_API_KEY` with your API key.)
 
 ## Starting the app
 
@@ -83,7 +84,7 @@ The tool will update the report immediately.
 
 | Problem | What to do |
 |---------|-----------|
-| App shows "Set ANTHROPIC_API_KEY" | Ask IT to set the API key and restart the app. |
+| "Set ANTHROPIC_API_KEY" message (only when using AI-assisted engine) | Ask IT to set the API key and restart the app. The automatic engine works without it. |
 | A website is blocked or slow | Items from that site will show "Needs Review". Check the provider manually. |
 | Report seems stuck | Wait a few more minutes. If it still hangs, check the logs (ask IT to look at `logs/app.log`). |
 | Evidence images are missing | This is rare. Ask IT to check the logs for errors during capture. |

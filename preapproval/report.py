@@ -14,7 +14,7 @@ from pathlib import Path
 
 import markdown as md
 
-from .models import FindingStatus, VerificationResult
+from .models import FindingStatus, VerificationResult, format_category
 
 _STATUS_ICON = {
     FindingStatus.FOUND: "✅ Found",
@@ -49,7 +49,7 @@ def render_markdown(result: VerificationResult, embed_images: bool = False) -> s
         "| | |",
         "|---|---|",
         f"| Participant | {r.participant_name} (age {r.participant_age or '—'}) |",
-        f"| Category | {r.category.value.replace('_', ' ').title()} |",
+        f"| Category | {format_category(r.category)} |",
         f"| Requested | {r.requested_item} |",
         f"| Provider / Vendor | {r.provider_name} |",
         f"| Website / link | {r.url or '— (missing on form)'} |",

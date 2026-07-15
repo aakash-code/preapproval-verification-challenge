@@ -18,6 +18,17 @@ class Category(str, Enum):
     APPEAL = "appeal"
 
 
+_ACRONYM_CATEGORIES = {"hri", "otps"}
+
+
+def format_category(category: "Category | str") -> str:
+    """Display-friendly category name, keeping known acronyms uppercase."""
+    value = category.value if isinstance(category, Category) else str(category)
+    if value in _ACRONYM_CATEGORIES:
+        return value.upper()
+    return value.replace("_", " ").title()
+
+
 class ChecklistAnswer(BaseModel):
     """A YES/NO question as answered on the form itself."""
 

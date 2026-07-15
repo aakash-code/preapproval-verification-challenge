@@ -48,8 +48,12 @@ def _out_name(pdf: Path) -> str:
     return m.group(1) if m else re.sub(r"[^a-z0-9]+", "-", pdf.stem.lower()).strip("-")
 
 
-def start_review_job(pdf_path: Path, out_root: Path) -> Job:
-    """Register a job and spawn a daemon thread that runs the full pipeline."""
+def start_review_job(pdf_path: Path, out_root: Path, engine: str = "auto") -> Job:
+    """Register a job and spawn a daemon thread that runs the full pipeline.
+
+    ``engine`` is "auto" | "ai" | "automation"; it is resolved to a concrete
+    engine inside the thread.
+    """
     pdf_path = Path(pdf_path)
     out_root = Path(out_root)
     report_name = _out_name(pdf_path)
@@ -64,20 +68,17 @@ def start_review_job(pdf_path: Path, out_root: Path) -> Job:
     with _LOCK:
         _JOBS[job.id] = job
 
-    thread = threading.Thread(target=_run, args=(job, report_name), daemon=True)
+    thread = threading.Thread(target=_run, args=(job, report_name, engine), daemon=True)
     thread.start()
     return job
 
 
-def _run(job: Job, report_name: str) -> None:
+def _run(job: Job, report_name: str, engine: str = "auto") -> None:
     # Deferred imports so importing this module never pulls in anthropic/playwright.
-    import anthropic
-
+    from ..engine import resolve_engine
     from ..errors import PipelineError
-    from ..extract import extract_request
     from ..logging_config import JobLogHandler
     from ..report import write_report
-    from ..research import run_research
 
     # The per-job buffer captures the same INFO lines the CLI logs. Records
     # carrying a traceback (exc_info) are filtered out so the progress console
@@ -91,12 +92,26 @@ def _run(job: Job, report_name: str) -> None:
     log = logger.info  # streamed to the job buffer, console, and app.log
 
     try:
-        client = anthropic.Anthropic()
+        resolved = resolve_engine(engine)
+        client = None
+        if resolved == "ai":
+            import anthropic
+
+            client = anthropic.Anthropic()
 
         log("=== %s → %s ===", job.pdf_path.name, job.out_dir)
+        log("Engine: %s (%s)", resolved,
+            "Claude / AI" if resolved == "ai" else "deterministic rules, no API key")
         log("[1/3] Reading the application form...")
         try:
-            request = extract_request(job.pdf_path, client)
+            if resolved == "ai":
+                from ..extract import extract_request
+                request = extract_request(job.pdf_path, client)
+            else:
+                from ..automation.extract_rules import extract_request_rules
+                request = extract_request_rules(job.pdf_path)
+        except PipelineError:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("Extraction failed for %s", job.pdf_path.name)
             raise PipelineError(
@@ -112,7 +127,12 @@ def _run(job: Job, report_name: str) -> None:
 
         log("[2/3] Researching the website and capturing evidence...")
         try:
-            result = run_research(request, job.out_dir / "evidence", client, headless=True, log=log)
+            if resolved == "ai":
+                from ..research import run_research
+                result = run_research(request, job.out_dir / "evidence", client, headless=True, log=log)
+            else:
+                from ..automation.research_rules import run_research_rules
+                result = run_research_rules(request, job.out_dir / "evidence", headless=True, log=log)
         except Exception as exc:  # noqa: BLE001
             logger.exception("Website research failed for %s", job.pdf_path.name)
             raise PipelineError(
@@ -127,6 +147,12 @@ def _run(job: Job, report_name: str) -> None:
             raise PipelineError(
                 "The review finished but the report could not be saved.", original=exc
             ) from exc
+
+        try:
+            from .. import db
+            db.save_review(result, job.out_dir, report_name, resolved)
+        except Exception:  # noqa: BLE001
+            logger.warning("Could not write the audit-DB record for %s", job.pdf_path.name)
 
         log("DONE → %s/report.html", job.out_dir)
         job.report_name = report_name

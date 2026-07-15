@@ -33,6 +33,9 @@ CATEGORIES = [
     "appeal",
 ]
 
+# A real sample filename, used where a valid PDF selection is needed.
+SAMPLES_FOR_TEST = ["Sample-01---Community-Class-GallopNYC.pdf"]
+
 
 # ---- checklists ---------------------------------------------------------
 
@@ -159,7 +162,118 @@ def test_review_rejects_bogus_sample(client, monkeypatch):
 
 
 def test_review_without_key_shows_setup(client, monkeypatch):
+    # Without a key and without explicitly requesting engine=ai, a bogus sample
+    # must still be rejected (400) before any engine logic runs — the review
+    # form now defaults to the automation engine, which needs no key.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     resp = client.post("/review", data={"sample": "no-such-sample.pdf"})
+    assert resp.status_code == 400
+
+
+def test_review_engine_ai_without_key_shows_setup(client, monkeypatch):
+    # Explicitly requesting the AI engine with no key shows the setup page — but
+    # only for a *valid* PDF selection (validation still comes first).
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    sample = next(iter(SAMPLES_FOR_TEST))
+    resp = client.post("/review", data={"sample": sample, "engine": "ai"})
     assert resp.status_code == 200
     assert "ANTHROPIC_API_KEY" in resp.text
+
+
+# ---- automation extraction ---------------------------------------------
+
+def _sample_paths():
+    from preapproval.web.app import SAMPLES_DIR
+
+    return sorted(SAMPLES_DIR.glob("*.pdf"))
+
+
+def test_extract_rules_all_samples():
+    from preapproval.automation.extract_rules import extract_request_rules
+
+    paths = _sample_paths()
+    assert len(paths) == 10, "expected 10 sample PDFs"
+    for p in paths:
+        req = extract_request_rules(p)
+        assert isinstance(req, ApplicationRequest)
+        assert isinstance(req.category, Category)
+        assert req.category in set(Category)
+        assert req.participant_name.strip(), f"{p.name}: empty participant_name"
+
+
+def test_extract_rules_category_detection():
+    from preapproval.automation.extract_rules import extract_request_rules
+
+    expected = {
+        "Sample-01": "community_class",
+        "Sample-02": "community_class",
+        "Sample-03": "coaching",
+        "Sample-04": "membership",
+        "Sample-05": "membership",
+        "Sample-06": "hri",
+        "Sample-07": "hri",
+        "Sample-08": "otps",
+        "Sample-09": "transition_program",
+        "Sample-10": "appeal",
+    }
+    for p in _sample_paths():
+        key = next((k for k in expected if k in p.name), None)
+        assert key, f"unexpected sample file {p.name}"
+        req = extract_request_rules(p)
+        assert req.category.value == expected[key], f"{p.name} -> {req.category.value}"
+
+
+# ---- engine resolution --------------------------------------------------
+
+def test_resolve_engine(monkeypatch):
+    from preapproval.engine import resolve_engine
+
+    # Explicit choices pass through regardless of the environment.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert resolve_engine("ai") == "ai"
+    assert resolve_engine("automation") == "automation"
+
+    # auto/None resolve on the key's presence.
+    assert resolve_engine("auto") == "automation"
+    assert resolve_engine(None) == "automation"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-dummy")
+    assert resolve_engine("auto") == "ai"
+    assert resolve_engine(None) == "ai"
+    # Explicit automation still wins even when a key is set.
+    assert resolve_engine("automation") == "automation"
+
+
+# ---- audit database -----------------------------------------------------
+
+def test_db_roundtrip(tmp_path, monkeypatch):
+    from preapproval import db
+
+    db_path = tmp_path / "audit.db"
+    # Point save_review's init_db at the temp DB.
+    monkeypatch.setattr(db, "DEFAULT_DB_PATH", db_path)
+
+    result = _canned_result()
+    out_dir = tmp_path / "out"
+    write_report(result, out_dir)  # creates evidence/ dir if any
+
+    rid = db.save_review(result, out_dir, "sample-xx", "automation")
+    assert rid > 0
+
+    conn = db.init_db(db_path)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM reviews").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM findings").fetchone()[0] == len(result.findings)
+
+        # Re-saving the same review_name upserts (no duplicate rows).
+        db.save_review(result, out_dir, "sample-xx", "automation")
+        assert conn.execute("SELECT COUNT(*) FROM reviews").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM findings").fetchone()[0] == len(result.findings)
+    finally:
+        conn.close()
+
+
+def test_web_review_engine_field_present(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "automation" in resp.text
+    assert 'name="engine"' in resp.text

@@ -25,6 +25,19 @@
       </select>
     </div>
 
+    <div class="field">
+      <label for="engine"><strong>Review engine</strong></label>
+      <select id="engine" name="engine">
+        <option value="automation"{% if not key_set %} selected{% endif %}>Automatic (no API key needed)</option>
+        <option value="ai"{% if key_set %} selected{% endif %}>AI-assisted (Claude, requires ANTHROPIC_API_KEY)</option>
+      </select>
+      <p class="muted" style="margin:.3rem 0 0">
+        The Automatic engine checks the website with deterministic rules and needs no API key.
+        AI-assisted uses Claude and requires <code>ANTHROPIC_API_KEY</code>.
+        {% if key_set %}A key is currently set.{% else %}No key is set — Automatic is preselected.{% endif %}
+      </p>
+    </div>
+
     <button type="submit" class="btn">Start review</button>
   </form>
 </section>
