@@ -1,0 +1,156 @@
+{
+  "request": {
+    "category": "appeal",
+    "participant_name": "Yosef B.",
+    "participant_age": 22,
+    "fi_coordinator_name": "Leah Stern",
+    "broker_name": "Sarah Klein",
+    "requested_item": "Adult Group Jiu Jitsu",
+    "provider_name": "Gracie Barra",
+    "url": "https://graciebarra.com",
+    "fee_stated": "fee per session: $30 per session",
+    "valued_outcome": "Yosef will improve physical fitness, self-regulation, and social participation through a structured martial-arts class.",
+    "form_answers": [],
+    "denial_reason": "Denial date: 05 / 20 / 2026. Published fees could not be verified on the provider’s website.",
+    "justification": "Attached is a rate sheet obtained from the gym confirming the $30 group-class rate. The class is open to the public and subject-based (martial arts), consistent with OPWDD community-class guidelines. We respectfully request reconsideration of the denial.",
+    "extraction_notes": null
+  },
+  "findings": [
+    {
+      "criterion_id": "open_to_public",
+      "criterion_text": "Class is open to and attended by the broader public (not restricted to disabled/OPWDD individuals)",
+      "status": "Needs Review",
+      "note": "Could not find clear language about public access — please check manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "published_fees",
+      "criterion_text": "Class has published fees (a public price is visible)",
+      "status": "Needs Review",
+      "note": "No price was visible on the page (sites often block automated readers) — please confirm the published fee manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "identical_fees",
+      "criterion_text": "Fees are identical for OPWDD and non-OPWDD individuals (no special/segregated pricing)",
+      "status": "Needs Review",
+      "note": "No price was found, so identical-pricing could not be confirmed — please review.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "subject_based",
+      "criterion_text": "Class is subject-based (art, dance, martial arts, cooking, etc.)",
+      "status": "Found",
+      "note": "The page describes a subject-based activity ('art').",
+      "evidence_url": "https://graciebarra.com/#modal-bookclass",
+      "evidence_files": [
+        "evidence-subject-based-evidence-class-is-subject-based-art-danc.png"
+      ]
+    },
+    {
+      "criterion_id": "no_college_credits",
+      "criterion_text": "Class does NOT give college credits",
+      "status": "Found",
+      "note": "No mention of college credit found on the page (inferred from absence).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "not_clinical",
+      "criterion_text": "Class is NOT clinical/therapy in nature",
+      "status": "Found",
+      "note": "No clinical/therapy framing found on the page (inferred from absence).",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "published_schedule",
+      "criterion_text": "A published schedule exists",
+      "status": "Found",
+      "note": "The page shows scheduling information ('calendar').",
+      "evidence_url": "https://graciebarra.com/#modal-bookclass",
+      "evidence_files": [
+        "evidence-published-schedule-evidence-a-published-schedule-exists.png"
+      ]
+    },
+    {
+      "criterion_id": "fee_match",
+      "criterion_text": "Fee-match: published fee is consistent with the 'Fee per Session' on the form",
+      "status": "Needs Review",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "denial_reason_evidence",
+      "criterion_text": "Website evidence that specifically supports or refutes the stated denial reason",
+      "status": "Needs Review",
+      "note": "The denial reason concerns fees, but no price could be read from the site — this neither supports nor refutes the denial automatically; please review.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "budget_approved",
+      "criterion_text": "Community classes are currently approved in the participant's budget",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "community_inclusion",
+      "criterion_text": "Class provides opportunity for community inclusion",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "health_safety",
+      "criterion_text": "Class accommodates the individual's health and/or safety needs",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "independence",
+      "criterion_text": "Class increases independence or substitutes for human assistance",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "no_duplication",
+      "criterion_text": "Class does not duplicate Medicaid state plan / HCBS waiver / Board of Education services",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    },
+    {
+      "criterion_id": "life_plan_link",
+      "criterion_text": "Class relates to a habilitative need in the Life Plan (valued outcome)",
+      "status": "Internal — not website-verifiable",
+      "note": "Depends on internal records (budget / Life Plan / documents) — not checkable from the public web.",
+      "evidence_url": null,
+      "evidence_files": []
+    }
+  ],
+  "rate_comparison": {
+    "fee_on_form": "fee per session: $30 per session",
+    "fee_on_website": "not published",
+    "verdict": "not published",
+    "cap_check": null
+  },
+  "pages_visited": [
+    "https://graciebarra.com/",
+    "https://graciebarra.com/#modal-bookclass"
+  ],
+  "summary": "Automated rule-based check of Gracie Barra's website found 4 of 9 website-verifiable items, with 5 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-15 20:54 UTC"
+}
