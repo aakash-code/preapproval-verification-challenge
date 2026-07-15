@@ -1,59 +1,145 @@
-# Pre-Approval Website-Verification Tool — Build Challenge
+# Pre-Approval Website-Verification Tool
 
-**F5 Global Talent — AI Specialist evaluation project**
+An AI assistant for Pre-Approvals Reviewers. Given a completed pre-approval
+application form (PDF), it:
 
-You've been invited to this challenge because you're in the F5 Global Talent AI Specialist Pool. This is a real business problem from one of our clients, a NY-based human-services agency. We want to see how you turn a messy, real-world workflow into a clean, working AI tool.
+1. **Reads the form** — extracts the category, requested item, provider,
+   website link, and stated fee (Claude reads the PDF directly; no brittle OCR
+   templates).
+2. **Picks the right checklist** — seven categories, defined in
+   `config/checklists/*.yaml`, each separating **website-verifiable** criteria
+   from **internal** ones (budget / Life Plan items a website can never prove).
+3. **Researches the provider's public website** — Claude drives a real Chromium
+   browser (Playwright), following fee/schedule/registration links as needed.
+4. **Captures date-stamped evidence** — a whole-page screenshot **and PDF** of
+   each key page, plus a targeted, labeled screenshot per confirmed
+   requirement. Every capture has the UTC timestamp and URL burned into the
+   image for the audit file.
+5. **Produces a review-ready report** — request at a glance, rate comparison,
+   a Found / Not Found / Needs Review table with per-criterion notes and
+   evidence references, in Markdown and self-contained HTML.
 
----
+The tool **assists** the reviewer — it never approves or denies anything, and
+honest "Not Found / Needs Review" results are expected and correct. Every
+"Found" must be backed by a capture; the agent is instructed to never guess.
 
-## The project in one paragraph
+*(This repo was created from the challenge template — the original challenge
+instructions are preserved in `CHALLENGE.md`, the full brief in `docs/`, and
+the ten sample forms in `samples/`.)*
 
-The client's staff review purchase-approval applications for a government-funded disability program. Before certain purchases (a community class, a gym membership, a household item, a coaching course, etc.) can be approved, a reviewer must open the provider's public website and confirm the item is real and open to the public at a published price — then save date-stamped screenshot/PDF evidence for audits. Today that's done by hand, one site at a time. **Your job: build an AI tool that reads a completed application form (PDF), does the website research, captures the evidence, and produces a review-ready report.**
+## Running it (step by step)
 
-A human always makes the final approve/deny decision. Honest "couldn't verify this" results are correct and expected.
+You need: **Python 3.10+** and an **Anthropic API key**
+([console.anthropic.com](https://console.anthropic.com)).
 
-## What's in this repo
+```bash
+# 1. One-time setup
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/playwright install chromium
+
+# 2. Your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# 3. Review an application (or several)
+.venv/bin/python -m preapproval review "samples/Sample-01---Community-Class-GallopNYC.pdf"
+```
+
+Each run writes a report package to `outputs/sample-01/`:
 
 ```
-docs/
-  Short-Brief.pdf                 ← 1-page summary (start here)
-  Project-Brief.pdf               ← the FULL spec: requirements, checklists,
-                                    evidence rules, grading criteria (read all of it)
-  Sample-Applications-Guide.pdf   ← index of the 10 test forms
-samples/
-  Sample-01 … Sample-10           ← 10 completed application forms (PDF).
-                                    Fictional participants, REAL public provider
-                                    websites — your tool has genuine evidence to find.
-AI-CONVERSATION.md                ← placeholder — you MUST replace this (see below)
+outputs/sample-01/
+  report.md      ← the reviewer-facing report
+  report.html    ← same report with the evidence images embedded (open in a browser)
+  result.json    ← machine-readable result (used by the chat mode)
+  evidence/      ← date-stamped screenshots + page PDFs
 ```
 
-## How to do the challenge
+Useful flags: `--out DIR` changes the output root; `--headed` shows the
+browser window while the agent works (fun to watch).
 
-1. Click **"Use this template"** (top right) to create **your own copy** of this repo.
-2. **Your repo must be PUBLIC.** Private repos cannot be reviewed and count as no submission.
-3. Read `docs/Short-Brief.pdf`, then `docs/Project-Brief.pdf` in full — Section 5 (what a website can and can't prove) is the crux of the evaluation.
-4. Build the tool. CLI, web UI, or chat interface — your choice; justify it. Use any AI models/tools/frameworks you want.
-5. Run it end-to-end on **at least 3** of the forms in `samples/` and commit the output report packages (report + evidence captures).
-6. Replace `AI-CONVERSATION.md` with your **exported AI conversation** (Claude Code, Cursor, ChatGPT, etc.), including the **list of tools and models you used** at the top. See the file for the required format.
-7. Push everything, then submit your repo link at:
+### Talking to the tool
 
-**→ https://f5globaltalent.com/careers/preapproval-tool-test-001**
+Reviewers can adjust a completed report in plain language:
 
-Use the **same email address you applied to the F5 AI Specialist Pool with** — that's how we match your submission to your profile. You'll also record a short 60-second intro video on the submission page.
+```bash
+.venv/bin/python -m preapproval chat outputs/sample-01
+reviewer> change the published schedule item to Needs Review — the calendar link was broken for me
+reviewer> add a note that I called the provider to confirm the price
+reviewer> regenerate the report
+```
 
-## What you deliver (authoritative list)
+To re-run the website checks (e.g. the site changed), just run `review` on the
+same PDF again.
 
-1. **The working tool** in this repo — runs the full workflow on at least 3 samples.
-2. **The repo itself**, organized the way you'd want a team to inherit it: README with run instructions a non-technical reviewer could follow, clear structure, config-driven checklists, at least one committed sample output report with its evidence captures, a note on how to add a new form/checklist, and a statement of limitations/assumptions.
-3. **`AI-CONVERSATION.md`** — your real AI conversation + the tools/models list.
+## How it's built
 
-*(Where this README and the Project Brief PDF differ on deliverables — e.g. the brief mentions a walkthrough video — this README is authoritative: the AI conversation file plus the intro video on the submission page replace it.)*
+```
+preapproval/
+  extract.py     PDF → structured request (Claude + structured outputs, Pydantic-validated)
+  checklists.py  loads config/checklists/*.yaml (supports `inherits`, e.g. appeals extend community classes)
+  research.py    the agent loop: Claude + browser tools (open_url, capture_*, record_finding, finish_review)
+  browser.py     Playwright wrapper — navigation, date-stamp banner, highlight-and-capture
+  report.py      renders report.md / report.html / result.json
+  chat.py        plain-language report revision
+  cli.py         entry point
+config/checklists/*.yaml   the seven category checklists (the domain knowledge)
+```
 
-## Rules
+**Model:** `claude-opus-4-8` with adaptive thinking, via the Anthropic Python
+SDK. Chosen because the hard part of this task is judgment on messy websites
+("is this price really open to everyone?"), and evidence integrity matters
+more than per-run cost. Swapping to `claude-sonnet-5` (one constant per
+module) cuts cost ~40% if volume demands it.
 
-- Repo stays **public** from submission until you hear back from us.
-- **No fabricated evidence.** Screenshots and citations must be real captures of what the site showed. "Not Found / Needs Review" is a correct answer; a hallucinated finding is an automatic fail.
-- Do not commit API keys or secrets. All sample data is synthetic — commit it freely.
-- Your own work, with AI assistance expected and encouraged — that's the point. The AI conversation shows us how you actually work.
+**Why an agent loop, not a scraper:** provider sites vary wildly — fees may be
+on a linked page, in a PDF flyer, or absent. The model decides where to look,
+when it has proof, and when to stop and say "a human must check". The tool
+layer keeps it honest: `record_finding` rejects unknown criteria,
+`finish_review` refuses to complete until every criterion has a finding, and
+any criterion left unresolved is force-marked **Needs Review**, never guessed.
 
-Good luck. We're looking at how you think, not how polished the UI is.
+## Adding or changing a form/checklist
+
+Add a YAML file to `config/checklists/` (no code changes needed):
+
+```yaml
+id: my_new_category          # must match the file name
+name: My New Category
+criteria:
+  - id: published_fees
+    text: The fee is published
+    website_verifiable: true
+    guidance: What the agent should look for
+  - id: budget_approved
+    text: Category is approved in the budget
+    website_verifiable: false   # internal — reported, never assessed from the web
+caps: { program_cap_per_year: 500 }   # optional; shown to the agent for fee sanity-checks
+```
+
+Then add the category value to `Category` in `preapproval/models.py` so
+extraction can classify it, and mention distinguishing form features in the
+extraction prompt if it's not obvious from the form title. A checklist can
+`inherits: another_id` to extend it (this is how appeals reuse the community
+class checks).
+
+## Limitations, assumptions & what production would require
+
+- **Bot walls:** large retail sites (e.g. Amazon) sometimes block headless
+  browsers. The agent captures what it sees and marks the affected criteria
+  Needs Review rather than pretending. Production would want a residential
+  proxy / retailer product API for those categories.
+- **Evidence ≠ truth:** a screenshot proves what the site showed at capture
+  time, not that the site is accurate. The reviewer stays in the loop.
+- **PHI:** sample forms are synthetic. Production would need a BAA-covered API
+  arrangement, redaction of participant fields before any third-party call
+  (only the provider/item/fee are needed for web research), encrypted storage
+  of report packages, and access controls.
+- **Cost/latency:** a review takes ~2–5 minutes and a few dollars of Opus
+  tokens. Batchable overnight; Sonnet or per-category model routing would cut
+  cost.
+- **Determinism:** two runs may phrase notes differently or pick different
+  evidence pages. The findings schema and forced per-criterion coverage keep
+  results comparable.
+- **Not in scope** (per the brief): internal systems, budgets, Life Plans,
+  approval decisions, payments.

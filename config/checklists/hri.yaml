@@ -1,0 +1,34 @@
+id: hri
+name: Household Related Items (HRI)
+caps:
+  budget_year_cap: 1500
+  approval_valid: "3 months"
+exclusions:
+  - cell phone
+  - computer / laptop / tablet
+  - vehicle
+  - medical device
+  - pill dispenser
+criteria:
+  - id: item_exists
+    text: The item exists at the linked page, with a visible price
+    website_verifiable: true
+    guidance: Confirm the product page shows the item described on the form and a price.
+  - id: not_excluded
+    text: Item is plausibly NOT on the HRI exclusion list (not a cell phone, computer, vehicle, medical device, pill dispenser)
+    website_verifiable: true
+    guidance: Check what the item actually is against the exclusion list. Flag clearly excluded items.
+  - id: safety_features
+    text: Safety features described on the form are supported by the product page
+    website_verifiable: true
+    guidance: Compare safety claims on the form against the product description.
+  - id: fee_match
+    text: "Fee-match: listed price is consistent with the price on the form, and within the $1,500/budget-year cap"
+    website_verifiable: true
+    guidance: Compare prices; flag if the stated price exceeds $1,500 or differs from the listing.
+  - id: budget_approved
+    text: HRI is approved in the participant's budget
+    website_verifiable: false
+  - id: life_plan_link
+    text: Item supports a goal in the participant's Life Plan
+    website_verifiable: false

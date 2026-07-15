@@ -1,0 +1,32 @@
+id: coaching
+name: Coaching (for Parents/Spouse)
+caps:
+  group_class_max_per_class: 55
+  private_class_max_per_class: 111
+  program_cap_per_year: 500
+criteria:
+  - id: published_fees
+    text: Published fees exist for the course/class
+    website_verifiable: true
+    guidance: Find the course price listed publicly.
+  - id: fee_cap
+    text: "Fee sanity-check: ≤ $55 per group class / ≤ $111 per private class; program capped at $500/year"
+    website_verifiable: true
+    guidance: Compare the published/stated fee against the caps. Flag if it exceeds them.
+  - id: educational_content
+    text: Content is a genuine educational/coaching opportunity (not lodging/travel, which is excluded)
+    website_verifiable: true
+    guidance: The page should describe an educational course, workshop, or coaching program.
+  - id: fee_match
+    text: "Fee-match: published fee is consistent with the fee on the form"
+    website_verifiable: true
+    guidance: Compare the published price against the fee stated on the form.
+  - id: adults_only
+    text: Attendee is an adult (18+) — coaching is for parents/spouse
+    website_verifiable: false
+  - id: budget_approved
+    text: Coaching is approved in the participant's budget
+    website_verifiable: false
+  - id: life_plan_link
+    text: Course relates to a goal in the participant's Life Plan
+    website_verifiable: false

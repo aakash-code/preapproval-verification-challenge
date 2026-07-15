@@ -1,0 +1,30 @@
+id: otps
+name: OTPS (Other Than Personal Services)
+caps:
+  budget_year_cap: 3000
+exclusions:
+  - cable TV
+  - common household supplies
+  - rental cars
+  - legal fees
+  - co-pays
+  - experimental therapies
+criteria:
+  - id: item_exists
+    text: The item exists at the linked page, with a visible price
+    website_verifiable: true
+    guidance: Confirm the product page shows the item described on the form and a price.
+  - id: not_excluded
+    text: Item is plausibly NOT on the OTPS exclusion list (not cable TV, common household supplies, rental cars, legal fees, co-pays, experimental therapies)
+    website_verifiable: true
+    guidance: Check what the item actually is against the exclusion list.
+  - id: fee_match
+    text: "Fee-match: listed price is consistent with the price on the form, and within the $3,000/budget-year cap"
+    website_verifiable: true
+    guidance: Compare prices; flag if the stated price exceeds $3,000 or differs from the listing.
+  - id: budget_approved
+    text: OTPS is approved in the participant's budget
+    website_verifiable: false
+  - id: life_plan_link
+    text: Item supports a goal in the participant's Life Plan
+    website_verifiable: false

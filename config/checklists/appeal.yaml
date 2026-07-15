@@ -1,0 +1,14 @@
+id: appeal
+name: Pre-Approval Appeals
+note: >
+  Re-run the Community Classes website checks, framed against the stated denial
+  reason, and surface evidence that specifically supports or refutes that reason.
+inherits: community_class
+criteria:
+  - id: denial_reason_evidence
+    text: Website evidence that specifically supports or refutes the stated denial reason
+    website_verifiable: true
+    guidance: >
+      Read the denial reason from the form. Search the site specifically for
+      evidence bearing on that reason and state clearly whether the evidence
+      supports or refutes the denial.

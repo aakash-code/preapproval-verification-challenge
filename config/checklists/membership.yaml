@@ -1,0 +1,21 @@
+id: membership
+name: Health-Club / Organizational Memberships
+criteria:
+  - id: open_to_public
+    text: Organization is open to the public — not a private/invitation-only club
+    website_verifiable: true
+    guidance: Look for open membership sign-up available to anyone.
+  - id: published_fee
+    text: Membership fee is published
+    website_verifiable: true
+    guidance: Find the membership price (monthly/yearly) listed publicly.
+  - id: fee_match
+    text: "Fee-match: published membership fee is consistent with the fee on the form (yearly/monthly)"
+    website_verifiable: true
+    guidance: Compare the published amount against the form's fee. Note billing period differences.
+  - id: budget_approved
+    text: Memberships are approved in the participant's budget
+    website_verifiable: false
+  - id: life_plan_link
+    text: Membership relates to a goal in the participant's Life Plan
+    website_verifiable: false

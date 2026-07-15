@@ -1,0 +1,55 @@
+id: community_class
+name: Community Classes
+caps:
+  invoice_rule: ">2 sessions/day (up to 60 min each) or >7 sessions/week at one provider requires prior approval"
+criteria:
+  - id: open_to_public
+    text: Class is open to and attended by the broader public (not restricted to disabled/OPWDD individuals)
+    website_verifiable: true
+    guidance: Look for open registration, "all welcome", public schedules/sign-up. Absence of disability-only restrictions.
+  - id: published_fees
+    text: Class has published fees (a public price is visible)
+    website_verifiable: true
+    guidance: Find a price, rate card, or fee listed publicly on the site.
+  - id: identical_fees
+    text: Fees are identical for OPWDD and non-OPWDD individuals (no special/segregated pricing)
+    website_verifiable: true
+    guidance: Check for any separate "disability", "OPWDD", or "special needs" pricing tier. A single public price with no such tier supports this.
+  - id: subject_based
+    text: Class is subject-based (art, dance, martial arts, cooking, etc.)
+    website_verifiable: true
+    guidance: The class should teach an identifiable subject or skill.
+  - id: no_college_credits
+    text: Class does NOT give college credits
+    website_verifiable: true
+    guidance: Look for credit-bearing / degree language. Absence of it supports this criterion.
+  - id: not_clinical
+    text: Class is NOT clinical/therapy in nature
+    website_verifiable: true
+    guidance: Watch for "therapy", "clinical", "treatment" framing of the class itself.
+  - id: published_schedule
+    text: A published schedule exists
+    website_verifiable: true
+    guidance: Look for class times, calendars, or session schedules.
+  - id: fee_match
+    text: "Fee-match: published fee is consistent with the 'Fee per Session' on the form"
+    website_verifiable: true
+    guidance: Compare the published price against the fee stated on the form.
+  - id: budget_approved
+    text: Community classes are currently approved in the participant's budget
+    website_verifiable: false
+  - id: community_inclusion
+    text: Class provides opportunity for community inclusion
+    website_verifiable: false
+  - id: health_safety
+    text: Class accommodates the individual's health and/or safety needs
+    website_verifiable: false
+  - id: independence
+    text: Class increases independence or substitutes for human assistance
+    website_verifiable: false
+  - id: no_duplication
+    text: Class does not duplicate Medicaid state plan / HCBS waiver / Board of Education services
+    website_verifiable: false
+  - id: life_plan_link
+    text: Class relates to a habilitative need in the Life Plan (valued outcome)
+    website_verifiable: false

@@ -1,0 +1,36 @@
+id: transition_program
+name: Transition Program
+caps:
+  course_max: 350
+  month_max: 800
+criteria:
+  - id: published_fees
+    text: Published fees exist
+    website_verifiable: true
+    guidance: Find the program/course price listed publicly.
+  - id: fee_cap
+    text: "Fee sanity-check: ≤ $350 per course / ≤ $800 per month"
+    website_verifiable: true
+    guidance: Compare the published/stated fee against the caps.
+  - id: noncredit_skill_building
+    text: Program is noncredit-bearing and oriented to skill-building / employment outcomes
+    website_verifiable: true
+    guidance: Look for "continuing education", "noncredit", vocational/skills framing. Flag degree/credit-bearing programs.
+  - id: not_opwdd_location
+    text: Program is NOT in an OPWDD-certified location
+    website_verifiable: true
+    guidance: Check whether the program venue is a general-public institution (college, community org) vs an OPWDD facility.
+  - id: fee_match
+    text: "Fee-match: published fee is consistent with the fee on the form"
+    website_verifiable: true
+    guidance: Compare the published price against the fee stated on the form.
+  - id: staff_screening
+    text: Staff background-screening is proven by a letter, not the website — needs document
+    website_verifiable: false
+    note: Flag as "needs document" for the reviewer.
+  - id: budget_approved
+    text: Transition program is approved in the participant's budget
+    website_verifiable: false
+  - id: life_plan_link
+    text: Program relates to a goal in the participant's Life Plan
+    website_verifiable: false
