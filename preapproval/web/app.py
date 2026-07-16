@@ -184,8 +184,20 @@ def create_app() -> FastAPI:
             job = jobs.get_job(job_id)
             if job is None:
                 return error_page(request, "That review job was not found.", status_code=404)
+            from ..models import Category
+
+            pending = (
+                job.pending_request.model_dump(mode="json")
+                if job.pending_request is not None else None
+            )
             return templates.TemplateResponse(
-                request, "job.html", {"job": job}
+                request,
+                "job.html",
+                {
+                    "job": job,
+                    "pending_request": pending,
+                    "categories": [c.value for c in Category],
+                },
             )
         except Exception:  # noqa: BLE001
             logger.exception("Failed to render job page")
@@ -197,15 +209,50 @@ def create_app() -> FastAPI:
             job = jobs.get_job(job_id)
             if job is None:
                 return JSONResponse({"error": "not found"}, status_code=404)
-            return {
+            payload: Dict[str, Any] = {
                 "status": job.status,
                 "log_lines": list(job.log_lines),
                 "error": job.error,
                 "report_name": job.report_name,
             }
+            if job.status == "needs_clarification":
+                payload["ambiguous_fields"] = list(job.ambiguous_fields)
+                payload["pending_request"] = (
+                    job.pending_request.model_dump(mode="json")
+                    if job.pending_request is not None else None
+                )
+            return payload
         except Exception:  # noqa: BLE001
             logger.exception("Failed to read job status")
             return JSONResponse({"error": "Could not read job status."}, status_code=500)
+
+    @app.post("/jobs/{job_id}/clarify")
+    async def clarify(
+        request: Request,
+        job_id: str,
+        url: str = Form(default=""),
+        provider_name: str = Form(default=""),
+        requested_item: str = Form(default=""),
+        category: str = Form(default=""),
+    ):
+        try:
+            corrections = {
+                "url": url,
+                "provider_name": provider_name,
+                "requested_item": requested_item,
+                "category": category,
+            }
+            corrections = {k: v for k, v in corrections.items() if v and v.strip()}
+            if not jobs.resume_after_clarification(job_id, corrections):
+                return error_page(
+                    request,
+                    "That review job was not found or is not awaiting clarification.",
+                    status_code=404,
+                )
+            return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to apply clarification for job %s", job_id)
+            return error_page(request, "Could not continue the review.")
 
     # ---- report ----------------------------------------------------------
 
@@ -270,15 +317,20 @@ def create_app() -> FastAPI:
             if report_dir is None or not (report_dir / "result.json").exists():
                 return JSONResponse({"error": "Report not found."}, status_code=404)
 
-            if not key_is_set():
-                return JSONResponse(
-                    {"reply": f"Set {KEY_ENV} to use chat.", "updated": False}, status_code=200
-                )
-
             payload = await request.json()
             message = (payload or {}).get("message", "").strip()
             if not message:
                 return JSONResponse({"error": "Empty message."}, status_code=400)
+
+            # No key: deterministic rule-based chat (stateless per message).
+            if not key_is_set():
+                from .. import chat
+
+                result = VerificationResult.model_validate_json(
+                    (report_dir / "result.json").read_text()
+                )
+                reply, updated = chat.rule_based_reply(message, result, report_dir)
+                return JSONResponse({"reply": reply, "updated": updated})
 
             import anthropic
 

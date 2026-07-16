@@ -71,6 +71,26 @@ class ApplicationRequest(BaseModel):
     )
 
 
+def compute_ambiguous_fields(request: "ApplicationRequest") -> List[str]:
+    """Fields a reviewer should confirm before the website check runs.
+
+    Returns any of ``"url"``, ``"provider_name"``, ``"requested_item"`` that are
+    empty, plus ``"category"`` when extraction could not confidently determine
+    the form category (flagged in ``extraction_notes``).
+    """
+    fields: List[str] = []
+    if not request.url:
+        fields.append("url")
+    if not request.provider_name:
+        fields.append("provider_name")
+    if not request.requested_item:
+        fields.append("requested_item")
+    notes = (request.extraction_notes or "").lower()
+    if "could not be confidently determined" in notes:
+        fields.append("category")
+    return fields
+
+
 class FindingStatus(str, Enum):
     FOUND = "Found"
     NOT_FOUND = "Not Found"

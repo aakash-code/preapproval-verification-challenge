@@ -66,7 +66,7 @@ Engine selection is resolved via `engine.py:resolve_engine()`: if `--engine ai` 
 
 **Automation engine** (`automation/`): Deterministic keyword and price-pattern matching (keyword detection in HTML, regex patterns for fees and schedules, Playwright navigation). Zero API key required; always returns the same result for the same input. When uncertain, conservatively marks criteria "Needs Review" rather than guessing.
 
-Extraction differs too: the AI engine reads the PDF with Claude; the automation engine parses it with `pdfplumber` + label-matching rules (`automation/extract_rules.py`). Both produce the same `ApplicationRequest` / `VerificationResult` Pydantic models, so `report.py`, `chat.py`, and the web dashboard do not know or care which engine produced the results. Both populate the audit database. The choice is transparent to users — reviewers see the same report format either way.
+Extraction differs too: the AI engine reads the PDF with Claude; the automation engine parses it with `pdfplumber` + label-matching rules (`automation/extract_rules.py`). This means the automation engine requires a PDF with a real text layer (digital/typed forms); on a scanned or image-only PDF it raises an actionable `PipelineError` suggesting the AI engine, which reads the page visually. Both produce the same `ApplicationRequest` / `VerificationResult` Pydantic models, so `report.py`, `chat.py`, and the web dashboard do not know or care which engine produced the results. Both populate the audit database. The choice is transparent to users — reviewers see the same report format either way.
 
 ## Evidence database
 

@@ -14,7 +14,10 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from ..models import ApplicationRequest
 
 logger = logging.getLogger("preapproval.web.jobs")
 
@@ -24,11 +27,15 @@ class Job:
     id: str
     pdf_path: Path
     out_dir: Path
-    status: str = "running"  # "running" | "done" | "failed"
+    # "running" | "needs_clarification" | "done" | "failed"
+    status: str = "running"
     log_lines: List[str] = field(default_factory=list)
     error: Optional[str] = None
     report_name: Optional[str] = None
     created_at: str = ""
+    engine: str = "auto"
+    pending_request: Optional["ApplicationRequest"] = None
+    ambiguous_fields: List[str] = field(default_factory=list)
 
 
 # id -> Job
@@ -64,6 +71,8 @@ def start_review_job(pdf_path: Path, out_root: Path, engine: str = "auto") -> Jo
         pdf_path=pdf_path,
         out_dir=out_dir,
         created_at=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        engine=engine,
+        report_name=report_name,
     )
     with _LOCK:
         _JOBS[job.id] = job
@@ -73,22 +82,29 @@ def start_review_job(pdf_path: Path, out_root: Path, engine: str = "auto") -> Jo
     return job
 
 
-def _run(job: Job, report_name: str, engine: str = "auto") -> None:
-    # Deferred imports so importing this module never pulls in anthropic/playwright.
-    from ..engine import resolve_engine
-    from ..errors import PipelineError
-    from ..logging_config import JobLogHandler
-    from ..report import write_report
+def _attach_job_handler(job: Job):
+    """Attach a per-job log handler that streams INFO lines into the job buffer.
 
-    # The per-job buffer captures the same INFO lines the CLI logs. Records
-    # carrying a traceback (exc_info) are filtered out so the progress console
-    # never shows a stack trace — those still go to logs/app.log via the file
-    # handler.
+    Records carrying a traceback (exc_info) are filtered out so the progress
+    console never shows a stack trace — those still go to logs/app.log via the
+    file handler. Returns ``(root_logger, handler)`` for later detachment.
+    """
+    from ..logging_config import JobLogHandler
+
     handler = JobLogHandler(job.log_lines)
     handler.addFilter(lambda record: not record.exc_info)
     root = logging.getLogger("preapproval")
     root.addHandler(handler)
+    return root, handler
 
+
+def _run(job: Job, report_name: str, engine: str = "auto") -> None:
+    # Deferred imports so importing this module never pulls in anthropic/playwright.
+    from ..engine import resolve_engine
+    from ..errors import PipelineError
+    from ..models import compute_ambiguous_fields
+
+    root, handler = _attach_job_handler(job)
     log = logger.info  # streamed to the job buffer, console, and app.log
 
     try:
@@ -122,6 +138,58 @@ def _run(job: Job, report_name: str, engine: str = "auto") -> None:
             request.provider_name, request.url)
         if request.extraction_notes:
             log("      note: %s", request.extraction_notes)
+
+        ambiguous = compute_ambiguous_fields(request)
+        if ambiguous:
+            job.pending_request = request
+            job.ambiguous_fields = ambiguous
+            job.status = "needs_clarification"
+            log("      A few things on the form need your confirmation before the "
+                "website check can start: %s", ", ".join(ambiguous))
+            return
+
+        if not request.url:
+            log("      WARNING: no URL on the form — expect Needs Review results.")
+    except PipelineError as e:
+        job.error = e.user_message
+        job.status = "failed"
+        log("FAILED: %s", e.user_message)
+        return
+    except Exception:  # noqa: BLE001 - never leak a stack trace to the UI
+        logger.exception("Unexpected job failure for %s", job.pdf_path.name)
+        job.error = "Something went wrong during the review. See logs/app.log for details."
+        job.status = "failed"
+        log("FAILED: %s", job.error)
+        return
+    finally:
+        root.removeHandler(handler)
+
+    # Not ambiguous: run the research/report tail (manages its own handler).
+    _run_research_and_report(job, request, report_name)
+
+
+def _run_research_and_report(job: Job, request, report_name: str) -> None:
+    """Research the website, write the report, record the audit row.
+
+    Shared by ``_run``'s normal path and the post-clarification resume path.
+    Owns the research/report try/except/PipelineError logic and sets the job's
+    terminal status. Attaches its own per-job log handler so it works whether or
+    not a caller has one attached.
+    """
+    from ..engine import resolve_engine
+    from ..errors import PipelineError
+    from ..report import write_report
+
+    root, handler = _attach_job_handler(job)
+    log = logger.info
+    try:
+        resolved = resolve_engine(job.engine)
+        client = None
+        if resolved == "ai":
+            import anthropic
+
+            client = anthropic.Anthropic()
+
         if not request.url:
             log("      WARNING: no URL on the form — expect Needs Review results.")
 
@@ -161,10 +229,53 @@ def _run(job: Job, report_name: str, engine: str = "auto") -> None:
         job.error = e.user_message
         job.status = "failed"
         log("FAILED: %s", e.user_message)
-    except Exception as e:  # noqa: BLE001 - never leak a stack trace to the UI
+    except Exception:  # noqa: BLE001 - never leak a stack trace to the UI
         logger.exception("Unexpected job failure for %s", job.pdf_path.name)
         job.error = "Something went wrong during the review. See logs/app.log for details."
         job.status = "failed"
         log("FAILED: %s", job.error)
     finally:
         root.removeHandler(handler)
+
+
+def resume_after_clarification(job_id: str, corrections: Dict[str, str]) -> bool:
+    """Apply reviewer corrections and start the research phase.
+
+    Returns False if the job is unknown or not awaiting clarification. Only
+    non-empty corrections overwrite the pending request; ``category`` is
+    validated against the ``Category`` enum and ignored if invalid.
+    """
+    from ..models import Category
+
+    job = get_job(job_id)
+    if job is None or job.status != "needs_clarification" or job.pending_request is None:
+        return False
+
+    request = job.pending_request
+    applied: List[str] = []
+    for field_name, value in corrections.items():
+        value = (value or "").strip()
+        if not value:
+            continue
+        if field_name == "category":
+            try:
+                request.category = Category(value)
+            except ValueError:
+                continue
+        elif field_name in ("url", "provider_name", "requested_item"):
+            setattr(request, field_name, value)
+        else:
+            continue
+        applied.append(f"{field_name}={value}")
+
+    job.status = "running"
+    job.ambiguous_fields = []
+    confirm_line = "Reviewer confirmed: " + (", ".join(applied) or "(no changes)")
+    job.log_lines.append(confirm_line)
+    logger.info("Resuming %s after clarification — %s", job.pdf_path.name, confirm_line)
+    report_name = job.report_name or _out_name(job.pdf_path)
+    thread = threading.Thread(
+        target=_run_research_and_report, args=(job, request, report_name), daemon=True
+    )
+    thread.start()
+    return True

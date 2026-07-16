@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import anthropic
 
@@ -92,6 +92,84 @@ def build_system_prompt(result: VerificationResult) -> str:
         "You cannot re-run website checks here — tell them to run `review` again for that.\n\n"
         "CURRENT REPORT STATE:\n" + result.model_dump_json(indent=2)
     )
+
+
+def _help_text(result: VerificationResult) -> str:
+    """Help / fallback message listing example phrasings and criterion ids."""
+    ids = ", ".join(f.criterion_id for f in result.findings) or "(none)"
+    return (
+        "I didn't understand that. Try one of:\n"
+        "  - mark <criterion> as Needs Review\n"
+        "  - add note to <criterion>: called the provider to confirm\n"
+        "  - update summary: looks good overall\n"
+        "  - regenerate report\n"
+        "<criterion> can be an id or part of the criterion text. Available ids: "
+        + ids
+    )
+
+
+def rule_based_reply(
+    message: str, result: VerificationResult, report_dir: Path
+) -> Tuple[str, bool]:
+    """Apply one plain-language command to ``result`` without any API call.
+
+    Parses ``message`` deterministically (``automation.chat_rules``), dispatches
+    the matched tool via the shared ``make_dispatch`` handler, always regenerates
+    the report files afterward on success, and returns ``(reply, updated)``.
+
+    ``updated`` is False for help / ambiguous / unrecognized messages (nothing
+    was changed), True when a command was applied.
+    """
+    from .automation.chat_rules import _find_criterion, _MARK_RE, _NOTE_RE, parse_command
+
+    report_dir = Path(report_dir)
+    handle = make_dispatch(result, report_dir)
+
+    parsed = parse_command(message, result.findings)
+    if parsed is None:
+        # Distinguish an ambiguous criterion reference from a bare non-match so
+        # we can list candidates when the reviewer clearly meant a criterion.
+        for rx in (_MARK_RE, _NOTE_RE):
+            m = rx.match(message)
+            if m and m.group("crit"):
+                candidates = _find_criterion(m.group("crit"), result.findings)
+                if isinstance(candidates, list) and len(candidates) > 1:
+                    listed = "\n".join(f"  - {c}" for c in candidates)
+                    return (
+                        "That matched more than one criterion — please be more "
+                        "specific. Did you mean:\n" + listed,
+                        False,
+                    )
+        return (_help_text(result), False)
+
+    name, args = parsed
+
+    if name == "update_summary" and "note" in args:
+        # Bare "add note: ..." with no criterion -> append to the summary.
+        new_summary = result.summary.rstrip() + " " + args["note"]
+        out = handle("update_summary", {"summary": new_summary})
+        confirmation = "Added your note to the summary."
+    elif name == "update_finding":
+        out = handle("update_finding", args)
+        if out.startswith("ERROR"):
+            return (out, False)
+        if "status" in args:
+            crit = args["criterion_id"]
+            confirmation = f"Updated {crit} to {args['status']}."
+        else:
+            confirmation = f"Added a note to {args['criterion_id']}."
+    elif name == "update_summary":
+        handle("update_summary", args)
+        confirmation = "Summary updated."
+    elif name == "regenerate_report":
+        handle("regenerate_report", {})
+        return ("Report regenerated.", True)
+    else:  # pragma: no cover - defensive
+        return (_help_text(result), False)
+
+    # Keep report.md / report.html in sync after any successful edit.
+    handle("regenerate_report", {})
+    return (confirmation + " Report regenerated.", True)
 
 
 def chat_loop(report_dir: Path, client: anthropic.Anthropic | None = None) -> None:

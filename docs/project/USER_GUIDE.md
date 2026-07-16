@@ -53,11 +53,15 @@ Open your web browser and go to **http://127.0.0.1:8000**. You'll see the dashbo
 - Click **Upload an application form** and select a PDF from your computer, *or*
 - Click **Use a sample form** to try a built-in example.
 
-**Step 2: Watch the progress**
+**Step 2: Confirm anything unclear (sometimes)**
+- If the form is missing a website link, or the provider name / requested item / category couldn't be read confidently, the tool pauses and shows you what it found so far, asking you to fill in or correct it before it checks the website. Type the correct value and click **Continue review** — or leave a field blank to have that item marked Needs Review instead.
+- Most well-formed applications skip this step entirely.
+
+**Step 3: Watch the progress**
 - The tool will show a live log of what it's doing: extracting the form, visiting the website, capturing evidence.
 - This typically takes 2–5 minutes.
 
-**Step 3: Read the report**
+**Step 4: Read the report**
 - Once complete, click to view the report. You'll see:
   - **Request summary**: who is requesting what, at what price.
   - **Rate comparison**: what the form states vs. what the website shows.
@@ -78,7 +82,10 @@ Type plain-language requests like:
 - "Add a note: I called the provider and they confirmed the schedule is accurate."
 - "Mark this as Needs Review — the website seems outdated."
 
-The tool will update the report immediately.
+The tool will update the report immediately. If you're using Automatic mode
+(no API key), the chat understands a smaller, fixed set of phrasings — if it
+doesn't understand your request, it will reply with examples and a list of
+the items you can refer to, rather than just ignoring you.
 
 ## Troubleshooting
 

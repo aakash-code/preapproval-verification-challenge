@@ -1,6 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Review in progress{% endblock %}
 {% block content %}
+{% set field_hints = {
+  "url": "The website link couldn't be read from the form. Enter it now, or leave it blank to mark this Needs Review.",
+  "provider_name": "The provider/vendor name couldn't be read. Enter it now, or leave it blank to skip.",
+  "requested_item": "The requested item/class/service couldn't be read. Enter it now, or leave it blank to skip.",
+  "category": "The category couldn't be determined from the form. Pick the correct one, or keep the default."
+} %}
+{% set field_labels = {
+  "url": "Website / link",
+  "provider_name": "Provider / vendor name",
+  "requested_item": "Requested item / class / service",
+  "category": "Category"
+} %}
+{% if job.status == "needs_clarification" %}
+<section class="card">
+  <h2>Reviewing <span class="muted">{{ job.pdf_path.name }}</span></h2>
+  <p class="status status-running">A few things on the form need your confirmation before the website check can start.</p>
+  <form method="post" action="/jobs/{{ job.id }}/clarify" class="clarify-form">
+    {% for f in job.ambiguous_fields %}
+    <div class="clarify-field">
+      <label for="field-{{ f }}"><strong>{{ field_labels.get(f, f) }}</strong></label>
+      <p class="muted">{{ field_hints.get(f, "") }}</p>
+      {% if f == "category" %}
+      <select id="field-{{ f }}" name="category">
+        {% for c in categories %}
+        <option value="{{ c }}"{% if pending_request and pending_request.category == c %} selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <input type="text" id="field-{{ f }}" name="{{ f }}"
+             value="{{ (pending_request[f] if pending_request and pending_request[f] else '') }}">
+      {% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn">Continue review</button>
+  </form>
+  <p><a href="/">← Back to dashboard</a></p>
+</section>
+{% else %}
 <section class="card">
   <h2>Reviewing <span class="muted">{{ job.pdf_path.name }}</span></h2>
   <p id="status-line" class="status status-running">Working… the assistant is reading the form and checking the website.</p>
@@ -11,6 +49,7 @@
   </div>
   <p><a href="/">← Back to dashboard</a></p>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -27,6 +66,11 @@ async function poll() {
     const res = await fetch(`/api/jobs/${jobId}`);
     if (!res.ok) throw new Error("status " + res.status);
     const data = await res.json();
+    if (data.status === "needs_clarification") {
+      // Extraction finished after the page loaded — reload to show the form.
+      window.location.reload();
+      return;
+    }
     const lines = data.log_lines || [];
     for (let i = shown; i < lines.length; i++) {
       const div = document.createElement("div");
@@ -53,10 +97,11 @@ async function poll() {
     }
     setTimeout(poll, 1500);
   } catch (e) {
-    statusLine.textContent = "Lost contact with the server. Retrying…";
+    if (statusLine) statusLine.textContent = "Lost contact with the server. Retrying…";
     setTimeout(poll, 1500);
   }
 }
-poll();
+// Only poll in the running/done/failed view; the clarification view has no console.
+if (consoleBox) poll();
 </script>
 {% endblock %}

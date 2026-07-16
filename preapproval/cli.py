@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import List
 
 logger = logging.getLogger("preapproval.cli")
 
@@ -25,13 +26,55 @@ def _out_name(pdf: Path) -> str:
     return m.group(1) if m else re.sub(r"[^a-z0-9]+", "-", pdf.stem.lower()).strip("-")
 
 
-def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str) -> None:
+def _prompt_ambiguous_fields(request, ambiguous_fields: List[str]) -> None:
+    """Interactively confirm/correct ambiguous fields on ``request`` in place."""
+    from .models import Category
+
+    _PROMPTS = {
+        "url": "The website link could not be confidently read from the form. Enter it now (or press Enter to leave blank and mark this Needs Review): ",
+        "provider_name": "The provider/vendor name could not be confidently read. Enter it now (or press Enter to skip): ",
+        "requested_item": "The requested item/class/service could not be confidently read. Enter it now (or press Enter to skip): ",
+    }
+    for field_name in ambiguous_fields:
+        if field_name == "category":
+            valid = ", ".join(c.value for c in Category)
+            prompt = (
+                f"The category could not be confidently determined (defaulted to "
+                f"{request.category.value}). Enter the correct category id ({valid}), "
+                f"or press Enter to keep the default: "
+            )
+            for attempt in range(2):
+                value = input(prompt).strip()
+                if not value:
+                    break
+                try:
+                    request.category = Category(value)
+                    logger.info("      reviewer-confirmed category: %s", value)
+                    break
+                except ValueError:
+                    if attempt == 0:
+                        print(f"  '{value}' is not a valid category id. Try again.")
+                    else:
+                        logger.warning(
+                            "      invalid category %r; keeping default %s",
+                            value, request.category.value,
+                        )
+            continue
+        value = input(_PROMPTS[field_name]).strip()
+        if value:
+            setattr(request, field_name, value)
+            logger.info("      reviewer-confirmed %s: %s", field_name, value)
+
+
+def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str,
+                interactive: bool = False) -> None:
     """Run the three pipeline stages, wrapping each in a friendly PipelineError.
 
     ``engine`` is the resolved engine ("ai" or "automation"). The "automation"
     path uses no Anthropic client at all.
     """
     from .errors import PipelineError
+    from .models import compute_ambiguous_fields
     from .report import write_report
 
     logger.info("      Engine: %s (%s)", engine,
@@ -59,6 +102,14 @@ def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str) -> 
     )
     if request.extraction_notes:
         logger.info("      note: %s", request.extraction_notes)
+
+    ambiguous_fields = compute_ambiguous_fields(request)
+    if ambiguous_fields and interactive and sys.stdin.isatty():
+        logger.info("      Some fields need your confirmation before the website check:")
+        _prompt_ambiguous_fields(request, ambiguous_fields)
+    elif ambiguous_fields:
+        logger.warning("      Ambiguous fields (not confirmed): %s", ", ".join(ambiguous_fields))
+
     if not request.url:
         logger.info("      WARNING: no URL on the form — the agent will report this; expect Needs Review results.")
 
@@ -96,6 +147,35 @@ def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str) -> 
     logger.info("DONE  → %s/report.md  (+ report.html, result.json, evidence/)", out_dir)
 
 
+def _rule_based_chat_loop(report_dir: Path) -> int:
+    """No-key chat: apply plain-language commands deterministically, per line."""
+    from .chat import rule_based_reply
+    from .models import VerificationResult
+
+    report_dir = Path(report_dir)
+    result_json = report_dir / "result.json"
+    if not result_json.exists():
+        logger.error("ERROR: no result.json in %s", report_dir)
+        return 2
+    result = VerificationResult.model_validate_json(result_json.read_text())
+
+    print(
+        f"Chatting about {report_dir} (rule-based, no API key). "
+        "Type your request ('quit' to exit)."
+    )
+    while True:
+        try:
+            user = input("\nreviewer> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not user or user.lower() in {"quit", "exit"}:
+            break
+        reply, _updated = rule_based_reply(user, result, report_dir)
+        print(reply)
+    print("Bye.")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="preapproval", description="Pre-approval website-verification tool")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -104,6 +184,10 @@ def main(argv=None) -> int:
     p_review.add_argument("pdfs", nargs="+", type=Path)
     p_review.add_argument("--out", type=Path, default=Path("outputs"), help="Output root (default: outputs/)")
     p_review.add_argument("--headed", action="store_true", help="Show the browser window while researching")
+    p_review.add_argument(
+        "--no-interactive", action="store_true",
+        help="Never prompt for missing/ambiguous fields, even in a terminal",
+    )
     p_review.add_argument(
         "--engine", choices=["auto", "ai", "automation"], default="auto",
         help="Review engine: 'ai' (Claude, needs ANTHROPIC_API_KEY), 'automation' "
@@ -133,17 +217,17 @@ def main(argv=None) -> int:
         uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="info")
         return 0
 
-    # `chat` always uses Claude; it still requires a key.
+    # `chat` uses Claude when a key is set; otherwise it falls back to a
+    # deterministic rule-based command loop that needs no API key.
     if args.cmd == "chat":
-        if not os.environ.get(_KEY_ENV):
-            logger.error("ERROR: set %s first (see README).", _KEY_ENV)
-            return 2
-        import anthropic
+        if os.environ.get(_KEY_ENV):
+            import anthropic
 
-        from .chat import chat_loop
+            from .chat import chat_loop
 
-        chat_loop(args.report_dir, anthropic.Anthropic())
-        return 0
+            chat_loop(args.report_dir, anthropic.Anthropic())
+            return 0
+        return _rule_based_chat_loop(args.report_dir)
 
     # `review`: only require a key when the resolved engine is "ai".
     from .engine import resolve_engine
@@ -172,7 +256,8 @@ def main(argv=None) -> int:
         out_dir = args.out / _out_name(pdf)
         logger.info("\n=== %s → %s ===", pdf.name, out_dir)
         try:
-            _run_review(pdf, out_dir, client, args.headed, engine)
+            _run_review(pdf, out_dir, client, args.headed, engine,
+                        interactive=not args.no_interactive)
         except PipelineError as e:
             failures += 1
             logger.error("FAILED on %s: %s", pdf.name, e.user_message)

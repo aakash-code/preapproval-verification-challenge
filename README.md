@@ -31,7 +31,7 @@ the ten sample forms in `samples/.`)*
 
 ## Running it (step by step)
 
-You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](https://console.anthropic.com)) is optional — the tool works without one using the deterministic automation engine; it is only needed for the AI-assisted engine and the plain-language chat feature.
+You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](https://console.anthropic.com)) is optional — the tool works fully without one, including chat, using the deterministic automation engine; a key only unlocks the AI-assisted engine and free-form natural-language chat (the no-key chat still understands a set of plain commands — see "Talking to the tool" below).
 
 ### Setup (one-time)
 
@@ -39,7 +39,7 @@ You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](ht
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
-export ANTHROPIC_API_KEY=sk-ant-...  # Optional; only needed for the AI-assisted engine and chat
+export ANTHROPIC_API_KEY=sk-ant-...  # Optional; unlocks the AI-assisted engine and free-form chat
 ```
 
 ### Web app (recommended)
@@ -74,7 +74,8 @@ Useful flags: `--out DIR` changes the output root; `--headed` shows the browser 
 
 ### Talking to the tool
 
-Reviewers can adjust a completed report in plain language:
+Reviewers can adjust a completed report in plain language — this works both
+with and without an API key:
 
 ```bash
 .venv/bin/python -m preapproval chat outputs/sample-01
@@ -82,6 +83,16 @@ reviewer> change the published schedule item to Needs Review — the calendar li
 reviewer> add a note that I called the provider to confirm the price
 reviewer> regenerate the report
 ```
+
+**With `ANTHROPIC_API_KEY` set**, Claude understands free-form phrasing like
+the examples above. **Without a key**, chat still works via a deterministic
+command parser — it understands a fixed set of patterns instead of open-ended
+language: `mark <criterion> as Found|Not Found|Needs Review`, `add note to
+<criterion>: <text>` (or a bare `add note: <text>` to append to the summary),
+`update summary: <text>`, and `regenerate report`. `<criterion>` can be an
+id (e.g. `published_fees`) or a snippet of the criterion's text; an
+unrecognized message gets a help reply listing the available criterion ids
+rather than silently failing.
 
 To re-run the website checks (e.g. the site changed), just run `review` on the
 same PDF again.
@@ -112,7 +123,8 @@ preapproval/
 config/checklists/*.yaml   the seven category checklists (the domain knowledge)
 data/            SQLite audit database preapproval.db (gitignored)
 logs/            runtime logs (gitignored, rotating)
-outputs/         report packages, one directory per reviewed application (gitignored)
+outputs/         report packages, one directory per reviewed application
+                 (all 10 samples are committed as the required sample output)
 tests/           unit and integration tests
 ```
 
@@ -183,5 +195,9 @@ class checks).
 - **Determinism:** two runs may phrase notes differently or pick different
   evidence pages. The findings schema and forced per-criterion coverage keep
   results comparable.
+- **Scanned PDFs:** the automation engine's extraction needs a real text layer
+  (it works on digital/typed forms, not scanned images without OCR) and raises a
+  clear, actionable error on an image-only PDF. The AI engine can read
+  image-only PDFs via vision when a key is available.
 - **Not in scope** (per the brief): internal systems, budgets, Life Plans,
   approval decisions, payments.

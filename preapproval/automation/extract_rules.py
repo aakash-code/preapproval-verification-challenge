@@ -28,6 +28,9 @@ _URL_RE = re.compile(r"https?://\S+")
 _MONEY_RE = re.compile(r"\$\s?\d[\d,]*(?:\.\d{2})?")
 
 # Category detection: (keyword substrings, category). First match wins.
+# "community class" has its own explicit entry (not just the fallback) so a
+# genuine Community Class form title is recognized as a confident match, not
+# flagged as an uncertain default — see _title_keyword_matched below.
 _CATEGORY_RULES: List[Tuple[Tuple[str, ...], str]] = [
     (("pre-approval appeals", "appeals form"), "appeal"),
     (("coaching",), "coaching"),
@@ -35,6 +38,7 @@ _CATEGORY_RULES: List[Tuple[Tuple[str, ...], str]] = [
     (("other than personal services", "otps"), "otps"),
     (("transition program",), "transition_program"),
     (("membership", "health club"), "membership"),
+    (("community class",), "community_class"),
 ]
 
 
@@ -65,13 +69,24 @@ def _is_yesno_table(table: List[List[Any]]) -> bool:
     return False
 
 
+_DEFAULT_CATEGORY = "community_class"
+
+
+def _title_keyword_matched(text: str) -> bool:
+    """Whether any category keyword matched the form title (first 6 lines)."""
+    head = _norm_label("\n".join(text.splitlines()[:6]))
+    return any(
+        any(k in head for k in keywords) for keywords, _cat in _CATEGORY_RULES
+    )
+
+
 def _detect_category(text: str) -> str:
     head = "\n".join(text.splitlines()[:6])
     head = _norm_label(head)
     for keywords, cat in _CATEGORY_RULES:
         if any(k in head for k in keywords):
             return cat
-    return "community_class"
+    return _DEFAULT_CATEGORY
 
 
 def _extract_fields(tables: List[List[List[Any]]]) -> Dict[str, str]:
@@ -254,7 +269,9 @@ def extract_request_rules(pdf_path: Path) -> ApplicationRequest:
 
     if not text.strip() and not tables:
         raise PipelineError(
-            f"Could not extract any text or tables from {pdf_path.name} — is this a valid form PDF?"
+            f"Could not extract any readable text or tables from {pdf_path.name}. This usually means it's a "
+            f"scanned or image-only PDF with no text layer — the automatic (rule-based) reader needs one. "
+            f"Try the AI-assisted engine instead (it reads the page visually), or provide a PDF with selectable text."
         )
 
     category = _detect_category(text)
@@ -262,6 +279,11 @@ def extract_request_rules(pdf_path: Path) -> ApplicationRequest:
 
     req: Dict[str, Any] = {"category": Category(category)}
     notes: List[str] = []
+    if category == _DEFAULT_CATEGORY and not _title_keyword_matched(text):
+        notes.append(
+            "Category could not be confidently determined from the form title; "
+            "defaulted to Community Class — please confirm."
+        )
     _classify(fields, req, notes)
 
     # Appeal free-text blocks (denial reason, justification, valued outcome)

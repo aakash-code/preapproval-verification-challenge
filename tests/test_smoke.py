@@ -277,3 +277,101 @@ def test_web_review_engine_field_present(client):
     assert resp.status_code == 200
     assert "automation" in resp.text
     assert 'name="engine"' in resp.text
+
+
+# ---- interactive clarification (web two-phase job) ----------------------
+
+def _poll_status(client, job_id, wanted, tries=100, delay=0.1):
+    import time
+
+    for _ in range(tries):
+        data = client.get(f"/api/jobs/{job_id}").json()
+        if data["status"] in wanted:
+            return data
+        time.sleep(delay)
+    raise AssertionError(f"job never reached {wanted}; last={data}")
+
+
+def test_web_clarification_flow(client, monkeypatch, tmp_path):
+    """Extraction with a missing URL pauses the job for reviewer confirmation."""
+    from preapproval.automation import extract_rules, research_rules
+    from preapproval.web import app as webapp
+
+    # Keep all writes off the committed outputs/ and audit DB.
+    monkeypatch.setattr(webapp, "OUTPUTS_DIR", tmp_path / "outputs")
+    from preapproval import db
+
+    monkeypatch.setattr(db, "DEFAULT_DB_PATH", tmp_path / "audit.db")
+
+    ambiguous_request = ApplicationRequest(
+        category=Category.COMMUNITY_CLASS,
+        participant_name="Test Participant",
+        requested_item="Pottery class",
+        provider_name="Clay Studio",
+        url=None,  # <- triggers needs_clarification
+    )
+
+    def fake_extract(pdf_path):
+        return ambiguous_request
+
+    def fake_research(request, evidence_dir, headless=True, log=None):
+        return VerificationResult(
+            request=request,
+            summary="stub research",
+            review_timestamp="2026-07-16 00:00 UTC",
+        )
+
+    monkeypatch.setattr(extract_rules, "extract_request_rules", fake_extract)
+    monkeypatch.setattr(research_rules, "run_research_rules", fake_research)
+
+    sample = next(iter(SAMPLES_FOR_TEST))
+    resp = client.post(
+        "/review",
+        data={"sample": sample, "engine": "automation"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    job_id = resp.headers["location"].rsplit("/", 1)[-1]
+
+    data = _poll_status(client, job_id, {"needs_clarification"})
+    assert "url" in data["ambiguous_fields"]
+    assert data["pending_request"]["url"] in (None, "")
+
+    resp = client.post(
+        f"/jobs/{job_id}/clarify",
+        data={"url": "https://example.com"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    data = _poll_status(client, job_id, {"done", "failed"})
+    assert data["status"] == "done", data
+
+
+def test_clarify_unknown_job_is_friendly(client):
+    resp = client.post("/jobs/nope/clarify", data={"url": "https://example.com"})
+    assert resp.status_code == 404
+    assert "Traceback" not in resp.text
+
+
+# ---- scanned / image-only PDF ------------------------------------------
+
+def test_scanned_pdf_raises_friendly_error(tmp_path):
+    import importlib.util
+
+    from preapproval.automation.extract_rules import extract_request_rules
+    from preapproval.errors import PipelineError
+
+    fixture_path = Path(__file__).parent / "fixtures" / "make_scanned_pdf.py"
+    spec = importlib.util.spec_from_file_location("make_scanned_pdf", fixture_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    source = _sample_paths()[0]  # Sample-01
+    scanned = tmp_path / "scanned.pdf"
+    mod.make_scanned_pdf(source, scanned)
+
+    with pytest.raises(PipelineError) as excinfo:
+        extract_request_rules(scanned)
+    msg = str(excinfo.value).lower()
+    assert "scanned" in msg or "image-only" in msg
