@@ -15,15 +15,23 @@ This tool assists pre-approval reviewers by automatically checking provider webs
 
 ## One-time setup
 
-Ask your IT contact to run these commands on the computer where you'll review forms:
+**On macOS, this is one step:** find the project folder and double-click
+**`install.command`**. A Terminal window opens and does everything for
+you — checks that Python is installed, sets everything up, and offers to
+start the app when it's done. If something's missing (like Python itself),
+it tells you exactly what to install and where to get it, then you just
+run it again. You don't need an IT contact or any command-line knowledge
+for this.
+
+If you're on Linux, or prefer the command line, run this instead:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/playwright install chromium
+./scripts/install.sh
 ```
 
-The tool is now ready to use. (Optional: if your organization wants to use AI-assisted checking, ask IT to set the environment variable `ANTHROPIC_API_KEY` with your API key.)
+Either way, the tool is ready to use afterward — no API key needed. (Optional:
+if your organization wants to use AI-assisted checking, open the new `.env`
+file the installer created and set `ANTHROPIC_API_KEY=` to your key.)
 
 ## Starting the app
 

@@ -35,6 +35,17 @@ You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](ht
 
 ### Setup (one-time)
 
+**Non-technical / fastest path — one-click installer:** on macOS, double-click
+**`install.command`** in the project folder. It checks for Python, creates
+the environment, installs everything (including the browser used for website
+checks), sets up `.env` from the template, and offers to start the app —
+printing plain-language next steps if anything is missing (e.g. Python isn't
+installed). Safe to run more than once. See `docs/project/USER_GUIDE.md` for
+a walkthrough. On Linux, run `./scripts/install.sh` in a terminal the same
+way.
+
+**Manual / any platform:**
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -139,6 +150,8 @@ logs/            runtime logs (gitignored, rotating)
 outputs/         report packages, one directory per reviewed application
                  (all 10 samples are committed as the required sample output)
 tests/           unit and integration tests
+scripts/install.sh   one-click setup (Python check, venv, deps, browser, .env)
+install.command      macOS Finder double-click wrapper around scripts/install.sh
 ```
 
 **Model:** `claude-opus-4-8` with adaptive thinking, via the Anthropic Python
