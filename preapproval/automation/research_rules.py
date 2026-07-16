@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime
 import logging
 import re
+import urllib.parse
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -35,6 +36,13 @@ _WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
 _BLOCKED_PHRASES = ("captcha", "verify you are a human", "access denied", "robot check")
 
 _LINK_KEYWORDS = ("fee", "price", "membership", "join", "schedule", "class", "register", "pricing")
+
+# Recognized e-commerce hosts we know how to build a site-search URL for, so a
+# generic product/homepage link on the form can fall back to an on-site search.
+_ECOMMERCE_SEARCH_TEMPLATES: Dict[str, str] = {
+    "amazon.com": "https://www.amazon.com/s?k={query}",
+    "www.amazon.com": "https://www.amazon.com/s?k={query}",
+}
 
 
 def _first_price(text: str) -> Optional[str]:
@@ -329,6 +337,87 @@ def _candidate_link(page_text: str) -> Optional[str]:
     return None
 
 
+def _significant_words(text: Optional[str]) -> List[str]:
+    """Alphabetic words longer than 3 chars, lower-cased."""
+    return [w.lower() for w in re.findall(r"[a-zA-Z]+", text or "") if len(w) > 3]
+
+
+def _looks_confirmed(page_text: str, request: ApplicationRequest) -> bool:
+    """Gate for whether a search fallback is even worth attempting.
+
+    Reuses the word-overlap logic from ``_eval_item_exists``: True when at least
+    two significant words from the requested item appear on the page, or a
+    ``$`` price pattern is present.
+    """
+    low = page_text.lower()
+    words = _significant_words(request.requested_item)
+    hits = [w for w in words if w in low]
+    if len(hits) >= 2:
+        return True
+    return _MONEY_RE.search(page_text) is not None
+
+
+def _best_matching_link(
+    page_text: str, request: ApplicationRequest, checklist_name: str
+) -> Optional[str]:
+    """Find the link whose *text* best matches the requested item by name.
+
+    Parses the ``== LINKS ON PAGE ==`` block (``<link text> -> <url>`` per line,
+    the exact format ``EvidenceBrowser.get_page_text`` emits). Scores each link's
+    text: +1 per significant word (>3 chars) from the requested item found in the
+    link text, +1 more if the provider name's first significant word also
+    appears. Returns the URL of the highest-scoring line with score >= 1, else
+    ``None``.
+    """
+    if "== LINKS ON PAGE ==" not in page_text:
+        return None
+    item_words = _significant_words(request.requested_item)
+    provider_words = _significant_words(request.provider_name)
+    provider_first = provider_words[0] if provider_words else None
+    if not item_words and not provider_first:
+        return None
+
+    _, _, links_block = page_text.partition("== LINKS ON PAGE ==")
+    best_score = 0
+    best_url: Optional[str] = None
+    for line in links_block.splitlines():
+        if " -> " not in line:
+            continue
+        link_text = line.split(" -> ", 1)[0].lower()
+        score = sum(1 for w in item_words if w in link_text)
+        if provider_first and provider_first in link_text:
+            score += 1
+        if score >= 1 and score > best_score:
+            m = re.search(r"https?://\S+", line)
+            if m:
+                best_score = score
+                best_url = m.group().rstrip(").,")
+    return best_url
+
+
+def _ecommerce_search_url(request: ApplicationRequest) -> Optional[str]:
+    """Build an on-site search URL for a recognized e-commerce host.
+
+    Looks up the form URL's host (bare and ``www.``-prefixed) in
+    ``_ECOMMERCE_SEARCH_TEMPLATES``; if found, encodes a query from the
+    requested item (parenthetical qualifiers stripped, first 6 significant
+    words). Returns the formatted URL, or ``None`` for unrecognized hosts.
+    """
+    url = request.url
+    if not url:
+        return None
+    host = urllib.parse.urlparse(
+        url if re.match(r"^https?://", url) else "https://" + url
+    ).netloc.lower()
+    template = _ECOMMERCE_SEARCH_TEMPLATES.get(host) or _ECOMMERCE_SEARCH_TEMPLATES.get("www." + host)
+    if not template:
+        return None
+    stripped = re.sub(r"\([^)]*\)", " ", request.requested_item or "")
+    words = _significant_words(stripped)[:6]
+    query = urllib.parse.quote_plus(" ".join(words))
+    return template.format(query=query)
+
+
 def run_research_rules(
     request: ApplicationRequest,
     evidence_dir: Path,
@@ -401,6 +490,50 @@ def run_research_rules(
                         # The hopped page is recorded in browser.visited (via goto).
                         browser.capture_full_page(
                             f"{request.provider_name or 'provider'} — fee/schedule page")
+
+        # Real search fallbacks: only when the direct page (and the generic hop
+        # above) still don't look like they have the requested item. Two extra
+        # attempts at most; visited URLs are skipped to avoid duplicate/looping
+        # hops. A failed hop never crashes the run — we just keep prior text.
+        if not _looks_confirmed(page_text, request):
+            visited_this_run = set(dict.fromkeys(browser.visited))
+
+            # 1) Keyword-targeted link hop: a nav link whose text names the item.
+            try:
+                match_url = _best_matching_link(page_text, request, checklist["name"])
+                if match_url and match_url not in visited_this_run and match_url != browser.page.url:
+                    hop_status = browser.goto(match_url)
+                    log(f"  [rules] {hop_status}")
+                    visited_this_run.add(match_url)
+                    if not hop_status.startswith("TIMEOUT"):
+                        hop_text = browser.get_page_text()
+                        if not _looks_blocked(hop_text):
+                            page_text = hop_text
+                            browser.capture_full_page(
+                                f"{request.provider_name or 'provider'} — matched via item search")
+                            log(f"  [rules] Item not confirmed on the main page; found a "
+                                f"matching link by name: {match_url}")
+            except Exception as exc:  # noqa: BLE001 - a failed hop must not crash the run
+                logger.warning("Targeted-link hop failed: %s", exc)
+
+            # 2) E-commerce site-search fallback (HRI/OTPS/known vendors).
+            if not _looks_confirmed(page_text, request):
+                try:
+                    search_url = _ecommerce_search_url(request)
+                    if search_url and search_url not in visited_this_run and search_url != browser.page.url:
+                        hop_status = browser.goto(search_url)
+                        log(f"  [rules] {hop_status}")
+                        visited_this_run.add(search_url)
+                        if not hop_status.startswith("TIMEOUT"):
+                            hop_text = browser.get_page_text()
+                            if not _looks_blocked(hop_text):
+                                page_text = hop_text
+                                browser.capture_full_page(
+                                    f"{request.provider_name or 'provider'} — vendor search for the item")
+                            log(f"  [rules] Item still not confirmed; searching the "
+                                f"vendor site: {search_url}")
+                except Exception as exc:  # noqa: BLE001 - a failed hop must not crash the run
+                    logger.warning("Vendor-search hop failed: %s", exc)
 
         ctx = _Ctx(request, checklist, page_text)
 

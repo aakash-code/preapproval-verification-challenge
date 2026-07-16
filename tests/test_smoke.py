@@ -354,6 +354,70 @@ def test_clarify_unknown_job_is_friendly(client):
     assert "Traceback" not in resp.text
 
 
+# ---- research-rules search fallbacks (pure, no network) ----------------
+
+def test_best_matching_link():
+    from preapproval.automation.research_rules import _best_matching_link
+
+    request = ApplicationRequest(
+        category=Category.TRANSITION_PROGRAM,
+        participant_name="Sam Doe",
+        requested_item="Adult & Continuing Education program",
+        provider_name="LaGuardia Community College",
+        url="https://www.laguardia.edu/",
+    )
+    page_text = (
+        "Welcome to the college.\n\n"
+        "== LINKS ON PAGE ==\n"
+        "Home -> https://www.laguardia.edu/\n"
+        "Adult & Continuing Education -> https://www.laguardia.edu/ace/\n"
+        "Athletics -> https://www.laguardia.edu/athletics/\n"
+    )
+    assert _best_matching_link(page_text, request, "Transition Program") == (
+        "https://www.laguardia.edu/ace/"
+    )
+
+    # Nothing overlaps -> None.
+    no_match = ApplicationRequest(
+        category=Category.TRANSITION_PROGRAM,
+        participant_name="Sam Doe",
+        requested_item="Underwater Basket Weaving",
+        provider_name="Nowhere Institute",
+        url="https://www.laguardia.edu/",
+    )
+    assert _best_matching_link(page_text, no_match, "Transition Program") is None
+
+
+def test_ecommerce_search_url():
+    from preapproval.automation.research_rules import _ecommerce_search_url
+
+    request = ApplicationRequest(
+        category=Category.HRI,
+        participant_name="Sam Doe",
+        requested_item="Bathroom safety grab bar (wall-mounted)",
+        provider_name="amazon.com",
+        url="https://www.amazon.com/dp/B0009X3S6C",
+    )
+    url = _ecommerce_search_url(request)
+    assert url is not None
+    assert "/s?k=" in url
+    # Item words present, parenthetical qualifier ("wall-mounted") stripped.
+    assert "bathroom" in url.lower()
+    assert "safety" in url.lower()
+    assert "grab" in url.lower()
+    assert "mounted" not in url.lower()
+
+    # Non-registry host -> None.
+    other = ApplicationRequest(
+        category=Category.HRI,
+        participant_name="Sam Doe",
+        requested_item="Grab bar",
+        provider_name="example.com",
+        url="https://example.com/dp/123",
+    )
+    assert _ecommerce_search_url(other) is None
+
+
 # ---- scanned / image-only PDF ------------------------------------------
 
 def test_scanned_pdf_raises_friendly_error(tmp_path):

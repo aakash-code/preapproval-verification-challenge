@@ -143,7 +143,7 @@ any criterion left unresolved is force-marked **Needs Review**, never guessed.
 
 ### Two review engines
 
-**Automatic** (rule-based): A deterministic keyword and price-pattern matcher that runs via Playwright, with zero API key required. It follows the same honesty guarantee as the AI engine — when uncertain, it leans "Needs Review" rather than guessing.
+**Automatic** (rule-based): A deterministic keyword and price-pattern matcher that runs via Playwright, with zero API key required. It follows the same honesty guarantee as the AI engine — when uncertain, it leans "Needs Review" rather than guessing. If the form's URL doesn't already land on a page showing the requested item, it tries two fallbacks before giving up: (1) a targeted hop to whichever on-page link's text best matches the item/provider name (finds a specific program page from a homepage link, e.g. training/coaching/membership sites), and (2) for recognized e-commerce hosts (currently Amazon), an on-site search URL built from the item's name (`/s?k=<query>`, parenthetical qualifiers stripped). Both are logged, both are skipped once the page already looks confirmed, and both still fail honestly to "Needs Review" if the destination is blocked or unclear — they widen *where* the tool looks, not what it's willing to assert.
 
 **AI-assisted** (Claude): The original engine using Claude's judgment to read websites like a human reviewer would. Requires `ANTHROPIC_API_KEY`. Better for nuanced or ambiguous cases.
 
