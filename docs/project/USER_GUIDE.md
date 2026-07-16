@@ -23,6 +23,9 @@ it tells you exactly what to install and where to get it, then you just
 run it again. You don't need an IT contact or any command-line knowledge
 for this.
 
+**On Windows**, double-click **`install.bat`** instead — same idea, no
+extra software needed.
+
 If you're on Linux, or prefer the command line, run this instead:
 
 ```bash

@@ -42,7 +42,11 @@ checks), sets up `.env` from the template, and offers to start the app —
 printing plain-language next steps if anything is missing (e.g. Python isn't
 installed). Safe to run more than once. See `docs/project/USER_GUIDE.md` for
 a walkthrough. On Linux, run `./scripts/install.sh` in a terminal the same
-way.
+way. On **Windows**, double-click **`install.bat`** — same steps, native
+Windows batch, no WSL/Git Bash required. *(`install.bat` mirrors the same
+logic as `install.sh` but hasn't been run on real Windows — no Windows
+environment was available to test it directly. If it doesn't work as
+expected, fall back to the manual steps below and let us know.)*
 
 **Manual / any platform:**
 
@@ -152,6 +156,7 @@ outputs/         report packages, one directory per reviewed application
 tests/           unit and integration tests
 scripts/install.sh   one-click setup (Python check, venv, deps, browser, .env)
 install.command      macOS Finder double-click wrapper around scripts/install.sh
+install.bat          Windows double-click installer (same steps, native batch)
 ```
 
 **Model:** `claude-opus-4-8` with adaptive thinking, via the Anthropic Python
