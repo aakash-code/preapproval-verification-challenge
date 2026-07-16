@@ -530,8 +530,11 @@ def run_research_rules(
                                 page_text = hop_text
                                 browser.capture_full_page(
                                     f"{request.provider_name or 'provider'} — vendor search for the item")
-                            log(f"  [rules] Item still not confirmed; searching the "
-                                f"vendor site: {search_url}")
+                                log(f"  [rules] Item still not confirmed; searched the "
+                                    f"vendor site: {search_url}")
+                            else:
+                                log(f"  [rules] Vendor search page could not be read "
+                                    f"(blocked or empty): {search_url}")
                 except Exception as exc:  # noqa: BLE001 - a failed hop must not crash the run
                     logger.warning("Vendor-search hop failed: %s", exc)
 

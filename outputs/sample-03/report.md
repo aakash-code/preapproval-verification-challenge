@@ -1,6 +1,6 @@
 # Pre-Approval Website-Verification Report
 
-> This report was produced by an automated review assistant on **2026-07-15 20:54 UTC**. It gathers public-website evidence only. **A human reviewer makes the final approve/deny decision.**
+> This report was produced by an automated review assistant on **2026-07-16 02:09 UTC**. It gathers public-website evidence only. **A human reviewer makes the final approve/deny decision.**
 
 ## The request at a glance
 
@@ -8,11 +8,11 @@
 |---|---|
 | Participant | Chaim D. (age 28) |
 | Category | Coaching |
-| Requested | 92NY – Parenting & Family Center |
+| Requested | — (not stated on form) |
 | Provider / Vendor | 92NY – Parenting & Family Center |
 | Website / link | https://www.92ny.org/parenting-and-family |
 | Fee stated on form | fee per class: $50; fee per course: $400 |
-| Review date | 2026-07-15 20:54 UTC |
+| Review date | 2026-07-16 02:09 UTC |
 
 ## Rate comparison
 

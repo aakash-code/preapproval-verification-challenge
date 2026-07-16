@@ -6,7 +6,7 @@
     "fi_coordinator_name": "Leah Stern",
     "broker_name": "Sarah Klein",
     "requested_item": "Laptop computer",
-    "provider_name": "amazon.com",
+    "provider_name": null,
     "url": "https://www.amazon.com/dp/B08N5WRWNW",
     "fee_stated": null,
     "valued_outcome": null,
@@ -54,22 +54,22 @@
     ],
     "denial_reason": null,
     "justification": "Esther would like a laptop to access online classes and communicate with family.",
-    "extraction_notes": "Safety features: N/A No 'Name of Provider/Vendor' label on this form; derived provider 'amazon.com' from the item link."
+    "extraction_notes": "Safety features: N/A No 'Name of Provider/Vendor' label on this form; the provider/vendor name could not be read (the item link points to 'amazon.com')."
   },
   "findings": [
     {
       "criterion_id": "item_exists",
       "criterion_text": "The item exists at the linked page, with a visible price",
       "status": "Needs Review",
-      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "note": "Could not confirm the item and price on the page — please review the listing.",
       "evidence_url": null,
       "evidence_files": []
     },
     {
       "criterion_id": "not_excluded",
       "criterion_text": "Item is plausibly NOT on the HRI exclusion list (not a cell phone, computer, vehicle, medical device, pill dispenser)",
-      "status": "Needs Review",
-      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "status": "Not Found",
+      "note": "The requested item matches an exclusion-list keyword ('computer', from 'computer / laptop / tablet') — flag it.",
       "evidence_url": null,
       "evidence_files": []
     },
@@ -77,7 +77,7 @@
       "criterion_id": "safety_features",
       "criterion_text": "Safety features described on the form are supported by the product page",
       "status": "Needs Review",
-      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "note": "Safety-feature claims require manual comparison against the product page.",
       "evidence_url": null,
       "evidence_files": []
     },
@@ -85,7 +85,7 @@
       "criterion_id": "fee_match",
       "criterion_text": "Fee-match: listed price is consistent with the price on the form, and within the $1,500/budget-year cap",
       "status": "Needs Review",
-      "note": "The site could not be read automatically (it timed out, was blocked by a bot-check, or returned no readable text). A human must verify this on the site.",
+      "note": "Could not parse a fee from both the form and the website — please compare manually.",
       "evidence_url": null,
       "evidence_files": []
     },
@@ -108,13 +108,14 @@
   ],
   "rate_comparison": {
     "fee_on_form": null,
-    "fee_on_website": null,
-    "verdict": "not checked",
+    "fee_on_website": "not published",
+    "verdict": "not published",
     "cap_check": null
   },
   "pages_visited": [
-    "https://www.amazon.com/dp/B08N5WRWNW"
+    "https://www.amazon.com/dp/B08N5WRWNW",
+    "https://www.amazon.com/s?k=laptop+computer"
   ],
-  "summary": "Automated rule-based check of amazon.com's website found 0 of 4 website-verifiable items, with 4 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
-  "review_timestamp": "2026-07-15 20:54 UTC"
+  "summary": "Automated rule-based check of the provider's website found 0 of 4 website-verifiable items, with 3 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-16 02:09 UTC"
 }

@@ -8,3 +8,9 @@ logs/*.log
 uploads/
 
 data/*.db
+
+# Secrets — real values live in a local .env, never committed. See .env.example
+# for the template and docs/project/ARCHITECTURE.md for the security posture.
+.env
+.env.*
+!.env.example

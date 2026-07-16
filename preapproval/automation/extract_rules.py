@@ -313,29 +313,31 @@ def extract_request_rules(pdf_path: Path) -> ApplicationRequest:
         if just:
             req["justification"] = just
 
-    # Best-effort fallbacks so a well-formed form never fails validation.
+    # Best-effort fallback for participant_name so a well-formed form never
+    # fails validation. Provider/item are intentionally left empty when not
+    # found (see below) so compute_ambiguous_fields flags them for a reviewer;
+    # a fake placeholder would silently defeat that clarification path.
     if not req.get("participant_name"):
         req["participant_name"] = "(not found on form)"
         notes.append("Participant name could not be read from the form.")
     if not req.get("provider_name"):
+        # Leave provider_name empty (do NOT backfill a host/placeholder) so it is
+        # flagged as ambiguous; explain in the notes only.
         if req.get("url"):
             host = urlparse(req["url"]).netloc or req["url"]
             host = host.split("/")[0]
             if host.lower().startswith("www."):
                 host = host[4:]
-            req["provider_name"] = host
             notes.append(
-                f"No 'Name of Provider/Vendor' label on this form; derived provider "
-                f"'{host}' from the item link."
+                f"No 'Name of Provider/Vendor' label on this form; the provider/vendor "
+                f"name could not be read (the item link points to '{host}')."
             )
         else:
-            req["provider_name"] = "(not stated on form)"
             notes.append("No provider/vendor name was stated on the form.")
     if not req.get("requested_item"):
-        # Coaching/transition forms have no explicit item label; fall back to
-        # the provider's offering so the field is meaningful.
-        req["requested_item"] = req.get("provider_name") or "(not specified on form)"
-        notes.append("No explicit item/class label found; using the provider name as the requested item.")
+        # Leave requested_item empty (do NOT backfill the provider name) so it is
+        # flagged as ambiguous for reviewer confirmation.
+        notes.append("No explicit item/class/service label was found on the form.")
     if not req.get("url"):
         notes.append("No website / product link was found on the form.")
 

@@ -5,7 +5,7 @@
     "participant_age": 28,
     "fi_coordinator_name": "Leah Stern",
     "broker_name": "Michael Ross",
-    "requested_item": "92NY – Parenting & Family Center",
+    "requested_item": null,
     "provider_name": "92NY – Parenting & Family Center",
     "url": "https://www.92ny.org/parenting-and-family",
     "fee_stated": "fee per class: $50; fee per course: $400",
@@ -30,7 +30,7 @@
     ],
     "denial_reason": null,
     "justification": null,
-    "extraction_notes": "No explicit item/class label found; using the provider name as the requested item."
+    "extraction_notes": "No explicit item/class/service label was found on the form."
   },
   "findings": [
     {
@@ -102,5 +102,5 @@
     "https://www.92ny.org/parenting-and-family"
   ],
   "summary": "Automated rule-based check of 92NY – Parenting & Family Center's website found 2 of 4 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
-  "review_timestamp": "2026-07-15 20:54 UTC"
+  "review_timestamp": "2026-07-16 02:09 UTC"
 }

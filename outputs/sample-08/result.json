@@ -6,7 +6,7 @@
     "fi_coordinator_name": "Leah Stern",
     "broker_name": "Michael Ross",
     "requested_item": "Weighted blanket (therapeutic)",
-    "provider_name": "amazon.com",
+    "provider_name": null,
     "url": "https://www.amazon.com/dp/B075YQXZLK",
     "fee_stated": null,
     "valued_outcome": null,
@@ -46,7 +46,7 @@
     ],
     "denial_reason": null,
     "justification": "A weighted blanket helps Shira with sensory regulation and sleep, supporting her health and safety at home.",
-    "extraction_notes": "Safety features: Breathable fabric; evenly distributed weight; sized to the individual No 'Name of Provider/Vendor' label on this form; derived provider 'amazon.com' from the item link."
+    "extraction_notes": "Safety features: Breathable fabric; evenly distributed weight; sized to the individual No 'Name of Provider/Vendor' label on this form; the provider/vendor name could not be read (the item link points to 'amazon.com')."
   },
   "findings": [
     {
@@ -97,8 +97,9 @@
     "cap_check": null
   },
   "pages_visited": [
-    "https://www.amazon.com/dp/B075YQXZLK"
+    "https://www.amazon.com/dp/B075YQXZLK",
+    "https://www.amazon.com/s?k=weighted+blanket"
   ],
-  "summary": "Automated rule-based check of amazon.com's website found 1 of 3 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
-  "review_timestamp": "2026-07-15 20:54 UTC"
+  "summary": "Automated rule-based check of the provider's website found 1 of 3 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-16 02:09 UTC"
 }

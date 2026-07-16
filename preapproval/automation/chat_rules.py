@@ -89,6 +89,13 @@ def parse_command(
     if not text or not text.strip():
         return None
 
+    # Try the summary-update pattern before the mark/change/set pattern: a loose
+    # criterion capture in _MARK_RE would otherwise swallow "set summary to X"
+    # (crit="summary"), find no matching criterion, and silently return None.
+    m = _SUMMARY_RE.match(text)
+    if m:
+        return ("update_summary", {"summary": m.group("text").strip()})
+
     m = _MARK_RE.match(text)
     if m:
         crit = _find_criterion(m.group("crit"), findings)
@@ -109,10 +116,6 @@ def parse_command(
         # No criterion reference -> append to the summary. The caller supplies
         # the current summary and builds the final text.
         return ("update_summary", {"note": note_text})
-
-    m = _SUMMARY_RE.match(text)
-    if m:
-        return ("update_summary", {"summary": m.group("text").strip()})
 
     if _REGEN_RE.match(text):
         return ("regenerate_report", {})

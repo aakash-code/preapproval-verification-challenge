@@ -134,8 +134,9 @@ def _run(job: Job, report_name: str, engine: str = "auto") -> None:
                 "Could not read the application form — is this a valid PDF?", original=exc
             ) from exc
 
-        log("      %s: %r @ %s — %s", request.category.value, request.requested_item,
-            request.provider_name, request.url)
+        log("      %s: %r @ %s — %s", request.category.value,
+            request.requested_item or "(not stated)",
+            request.provider_name or "(not stated)", request.url)
         if request.extraction_notes:
             log("      note: %s", request.extraction_notes)
 
@@ -176,6 +177,8 @@ def _run_research_and_report(job: Job, request, report_name: str) -> None:
     terminal status. Attaches its own per-job log handler so it works whether or
     not a caller has one attached.
     """
+    import os
+
     from ..engine import resolve_engine
     from ..errors import PipelineError
     from ..report import write_report
@@ -184,6 +187,17 @@ def _run_research_and_report(job: Job, request, report_name: str) -> None:
     log = logger.info
     try:
         resolved = resolve_engine(job.engine)
+        # Re-check the key here (this function runs on both the first-run and the
+        # resume paths) so a key removed after the job started fails with a
+        # specific, actionable message instead of the generic handler below.
+        if resolved == "ai" and not os.environ.get("ANTHROPIC_API_KEY"):
+            job.error = (
+                "The AI-assisted engine needs ANTHROPIC_API_KEY, which is no longer set. "
+                "Set the key and start a new review, or re-run with the automatic engine."
+            )
+            job.status = "failed"
+            log("FAILED: %s", job.error)
+            return
         client = None
         if resolved == "ai":
             import anthropic
@@ -245,30 +259,24 @@ def resume_after_clarification(job_id: str, corrections: Dict[str, str]) -> bool
     non-empty corrections overwrite the pending request; ``category`` is
     validated against the ``Category`` enum and ignored if invalid.
     """
-    from ..models import Category
+    from ..models import apply_ambiguous_field_correction
 
-    job = get_job(job_id)
-    if job is None or job.status != "needs_clarification" or job.pending_request is None:
-        return False
+    # The status check and the flip to "running" must be atomic: two concurrent
+    # resume calls must not both pass the check and spawn duplicate research
+    # threads. Hold _LOCK across check-and-set; do the slower work (applying
+    # corrections, starting the thread) outside the lock.
+    with _LOCK:
+        job = _JOBS.get(job_id)
+        if job is None or job.status != "needs_clarification" or job.pending_request is None:
+            return False
+        job.status = "running"
 
     request = job.pending_request
     applied: List[str] = []
     for field_name, value in corrections.items():
-        value = (value or "").strip()
-        if not value:
-            continue
-        if field_name == "category":
-            try:
-                request.category = Category(value)
-            except ValueError:
-                continue
-        elif field_name in ("url", "provider_name", "requested_item"):
-            setattr(request, field_name, value)
-        else:
-            continue
-        applied.append(f"{field_name}={value}")
+        if apply_ambiguous_field_correction(request, field_name, (value or "").strip()):
+            applied.append(f"{field_name}={(value or '').strip()}")
 
-    job.status = "running"
     job.ambiguous_fields = []
     confirm_line = "Reviewer confirmed: " + (", ".join(applied) or "(no changes)")
     job.log_lines.append(confirm_line)

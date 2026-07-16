@@ -5,7 +5,7 @@
     "participant_age": 21,
     "fi_coordinator_name": "Leah Stern",
     "broker_name": "Sarah Klein",
-    "requested_item": "LaGuardia Community College – Adult & Continuing Education",
+    "requested_item": null,
     "provider_name": "LaGuardia Community College – Adult & Continuing Education",
     "url": "https://www.laguardia.edu/ace/",
     "fee_stated": "fee per course: $300 per course",
@@ -50,16 +50,18 @@
     ],
     "denial_reason": null,
     "justification": null,
-    "extraction_notes": "No explicit item/class label found; using the provider name as the requested item."
+    "extraction_notes": "No explicit item/class/service label was found on the form."
   },
   "findings": [
     {
       "criterion_id": "published_fees",
       "criterion_text": "Published fees exist",
-      "status": "Needs Review",
-      "note": "No price was visible on the page (sites often block automated readers) — please confirm the published fee manually.",
-      "evidence_url": null,
-      "evidence_files": []
+      "status": "Found",
+      "note": "A published price was found on the page: $25.",
+      "evidence_url": "https://www.laguardia.edu/",
+      "evidence_files": [
+        "evidence-published-fees-evidence-published-fees-exist.png"
+      ]
     },
     {
       "criterion_id": "fee_cap",
@@ -72,12 +74,10 @@
     {
       "criterion_id": "noncredit_skill_building",
       "criterion_text": "Program is noncredit-bearing and oriented to skill-building / employment outcomes",
-      "status": "Found",
-      "note": "The page describes noncredit skill-building ('continuing education').",
-      "evidence_url": "https://laguardia.ce.cuny.edu/search.cfm",
-      "evidence_files": [
-        "evidence-noncredit-skill-building-evidence-program-is-noncredit-bearing-an.png"
-      ]
+      "status": "Needs Review",
+      "note": "Could not confirm noncredit/skill-building framing — please review.",
+      "evidence_url": null,
+      "evidence_files": []
     },
     {
       "criterion_id": "not_opwdd_location",
@@ -90,8 +90,8 @@
     {
       "criterion_id": "fee_match",
       "criterion_text": "Fee-match: published fee is consistent with the fee on the form",
-      "status": "Needs Review",
-      "note": "Could not parse a fee from both the form and the website — please compare manually.",
+      "status": "Not Found",
+      "note": "The website price ($25) differs from the fee on the form ($300).",
       "evidence_url": null,
       "evidence_files": []
     },
@@ -122,14 +122,15 @@
   ],
   "rate_comparison": {
     "fee_on_form": "fee per course: $300 per course",
-    "fee_on_website": "not published",
-    "verdict": "not published",
+    "fee_on_website": "$25",
+    "verdict": "differs",
     "cap_check": "Stated fee(s) $300 are within the program caps (max $800)."
   },
   "pages_visited": [
     "https://www.laguardia.edu/ce/home/",
-    "https://laguardia.ce.cuny.edu/search.cfm"
+    "https://laguardia.ce.cuny.edu/search.cfm",
+    "https://www.laguardia.edu/"
   ],
-  "summary": "Automated rule-based check of LaGuardia Community College – Adult & Continuing Education's website found 3 of 5 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
-  "review_timestamp": "2026-07-15 20:50 UTC"
+  "summary": "Automated rule-based check of LaGuardia Community College – Adult & Continuing Education's website found 3 of 5 website-verifiable items, with 1 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.",
+  "review_timestamp": "2026-07-16 02:09 UTC"
 }

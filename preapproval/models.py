@@ -46,10 +46,10 @@ class ApplicationRequest(BaseModel):
     participant_age: Optional[int] = None
     fi_coordinator_name: Optional[str] = None
     broker_name: Optional[str] = None
-    requested_item: str = Field(
-        description="The specific class / membership / item / program requested"
+    requested_item: Optional[str] = Field(
+        None, description="The specific class / membership / item / program requested"
     )
-    provider_name: str
+    provider_name: Optional[str] = None
     url: Optional[str] = Field(
         None, description="Link to webpage / place of publication / product link on the form"
     )
@@ -89,6 +89,40 @@ def compute_ambiguous_fields(request: "ApplicationRequest") -> List[str]:
     if "could not be confidently determined" in notes:
         fields.append("category")
     return fields
+
+
+# Single source of truth for the reviewer-facing prompt text of each ambiguous
+# field. Keyed by the field names ``compute_ambiguous_fields`` can return.
+AMBIGUOUS_FIELD_PROMPTS: dict[str, str] = {
+    "url": "The website link could not be confidently read from the form.",
+    "provider_name": "The provider/vendor name could not be confidently read.",
+    "requested_item": "The requested item/class/service could not be confidently read.",
+    "category": "The category could not be confidently determined.",
+}
+
+
+def apply_ambiguous_field_correction(
+    request: "ApplicationRequest", field_name: str, value: str
+) -> bool:
+    """Apply one reviewer-submitted correction to ``request`` in place.
+
+    Returns True if applied, False if invalid/skipped (empty value, unknown
+    field, or an unrecognized category). Shared by the CLI and web resume paths
+    so field-application logic lives in exactly one place.
+    """
+    value = (value or "").strip()
+    if not value:
+        return False
+    if field_name == "category":
+        try:
+            request.category = Category(value)
+            return True
+        except ValueError:
+            return False
+    if field_name in ("url", "provider_name", "requested_item"):
+        setattr(request, field_name, value)
+        return True
+    return False
 
 
 class FindingStatus(str, Enum):

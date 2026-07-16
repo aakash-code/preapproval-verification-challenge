@@ -1,6 +1,6 @@
 # Pre-Approval Website-Verification Report
 
-> This report was produced by an automated review assistant on **2026-07-15 20:54 UTC**. It gathers public-website evidence only. **A human reviewer makes the final approve/deny decision.**
+> This report was produced by an automated review assistant on **2026-07-16 02:09 UTC**. It gathers public-website evidence only. **A human reviewer makes the final approve/deny decision.**
 
 ## The request at a glance
 
@@ -9,10 +9,10 @@
 | Participant | Shira L. (age 27) |
 | Category | OTPS |
 | Requested | Weighted blanket (therapeutic) |
-| Provider / Vendor | amazon.com |
+| Provider / Vendor | — (not stated on form) |
 | Website / link | https://www.amazon.com/dp/B075YQXZLK |
 | Fee stated on form | — |
-| Review date | 2026-07-15 20:54 UTC |
+| Review date | 2026-07-16 02:09 UTC |
 
 ## Rate comparison
 
@@ -22,7 +22,7 @@
 
 ## Summary
 
-Automated rule-based check of amazon.com's website found 1 of 3 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.
+Automated rule-based check of the provider's website found 1 of 3 website-verifiable items, with 2 needing manual review. No AI model was used for this review — a human should double-check any 'Needs Review' items before deciding.
 
 ## Checklist findings
 
@@ -37,6 +37,7 @@ Automated rule-based check of amazon.com's website found 1 of 3 website-verifiab
 ## Pages reviewed
 
 - https://www.amazon.com/dp/B075YQXZLK
+- https://www.amazon.com/s?k=weighted+blanket
 
 ## Evidence captures
 

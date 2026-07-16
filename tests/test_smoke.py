@@ -6,6 +6,7 @@ to a dummy) so no API call can happen.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -439,3 +440,198 @@ def test_scanned_pdf_raises_friendly_error(tmp_path):
         extract_request_rules(scanned)
     msg = str(excinfo.value).lower()
     assert "scanned" in msg or "image-only" in msg
+
+
+# ---- Fix 1: no placeholder defeats clarification ------------------------
+
+def test_compute_ambiguous_flags_missing_provider_and_item():
+    from preapproval.models import compute_ambiguous_fields
+
+    req = ApplicationRequest(
+        category=Category.HRI,
+        participant_name="Sam Doe",
+        requested_item=None,
+        provider_name=None,
+        url=None,
+    )
+    flagged = compute_ambiguous_fields(req)
+    assert "provider_name" in flagged
+    assert "requested_item" in flagged
+    assert "url" in flagged
+
+
+def test_extract_rules_no_placeholder_for_missing_provider():
+    """Sample-06 has no provider/vendor label; extraction must leave
+    provider_name empty (falsy) so it is flagged, not backfilled with a host."""
+    from preapproval.automation.extract_rules import extract_request_rules
+    from preapproval.models import compute_ambiguous_fields
+
+    p = next(p for p in _sample_paths() if "Sample-06" in p.name)
+    req = extract_request_rules(p)
+    assert not req.provider_name, f"expected empty provider_name, got {req.provider_name!r}"
+    assert "provider_name" in compute_ambiguous_fields(req)
+
+
+# ---- Fix 5: chat 'set summary to X' is not swallowed by _MARK_RE --------
+
+def _summary_findings():
+    return [
+        Finding(
+            criterion_id="published_fees",
+            criterion_text="Class has published fees",
+            status=FindingStatus.FOUND,
+            note="ok",
+        )
+    ]
+
+
+def test_parse_command_set_summary_not_swallowed():
+    from preapproval.automation.chat_rules import parse_command
+
+    result = parse_command("set summary to review", _summary_findings())
+    assert result is not None
+    tool, args = result
+    assert tool == "update_summary"
+    assert args.get("summary") == "review"
+
+
+def test_parse_command_mark_still_works():
+    from preapproval.automation.chat_rules import parse_command
+
+    result = parse_command("mark published_fees as Needs Review", _summary_findings())
+    assert result is not None
+    tool, args = result
+    assert tool == "update_finding"
+    assert args.get("criterion_id") == "published_fees"
+    assert args.get("status") == "Needs Review"
+
+
+def test_parse_command_add_note_still_works():
+    from preapproval.automation.chat_rules import parse_command
+
+    result = parse_command("add note to published_fees: test", _summary_findings())
+    assert result is not None
+    tool, args = result
+    assert tool == "update_finding"
+    assert args.get("criterion_id") == "published_fees"
+    assert args.get("note") == "test"
+
+
+# ---- Fix 2 & 4: resume double-submit and API-key re-check ---------------
+
+def _make_pending_job(engine="automation", tmp_path=None):
+    from preapproval.web import jobs
+
+    job = jobs.Job(
+        id="testjob" + str(len(jobs._JOBS)),
+        pdf_path=Path("samples/Sample-01---Community-Class-GallopNYC.pdf"),
+        out_dir=(tmp_path / "out") if tmp_path else Path("/tmp/none"),
+        status="needs_clarification",
+        engine=engine,
+        report_name="sample-01",
+    )
+    job.pending_request = ApplicationRequest(
+        category=Category.COMMUNITY_CLASS,
+        participant_name="Test",
+        requested_item="Pottery",
+        provider_name="Clay Studio",
+        url="https://example.com",
+    )
+    with jobs._LOCK:
+        jobs._JOBS[job.id] = job
+    return job
+
+
+def test_resume_double_submit_returns_false(monkeypatch):
+    from preapproval.web import jobs
+
+    # Neutralize the research/report tail so no thread does real work.
+    monkeypatch.setattr(jobs, "_run_research_and_report", lambda *a, **k: None)
+
+    job = _make_pending_job()
+    first = jobs.resume_after_clarification(job.id, {})
+    second = jobs.resume_after_clarification(job.id, {})
+    assert first is True
+    assert second is False
+
+
+def test_resume_ai_engine_missing_key_fails_clearly(monkeypatch):
+    from preapproval.web import jobs
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    job = _make_pending_job(engine="ai")
+    assert jobs.resume_after_clarification(job.id, {}) is True
+
+    # The research thread should fail fast with a key-specific message.
+    import time
+    for _ in range(100):
+        if job.status in ("failed", "done"):
+            break
+        time.sleep(0.05)
+    assert job.status == "failed", job.status
+    assert job.error and "ANTHROPIC_API_KEY" in job.error
+    assert "something went wrong" not in job.error.lower()
+
+
+# ---- Fix 7: generic clarify form reading reaches corrections ------------
+
+def test_clarify_generic_form_reaches_corrections(client, monkeypatch):
+    from preapproval.web import jobs
+
+    captured = {}
+
+    def fake_resume(job_id, corrections):
+        captured["job_id"] = job_id
+        captured["corrections"] = corrections
+        return True
+
+    monkeypatch.setattr(jobs, "resume_after_clarification", fake_resume)
+    resp = client.post(
+        "/jobs/anyid/clarify",
+        data={"provider_name": "Acme Co", "requested_item": "Widget"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert captured["corrections"].get("provider_name") == "Acme Co"
+    assert captured["corrections"].get("requested_item") == "Widget"
+
+
+# ---- .env loading (local-dev secrets) ------------------------------------
+
+def test_load_env_reads_dotenv_file(tmp_path, monkeypatch):
+    import preapproval.config as config_mod
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("SOME_TEST_KEY=from-dotenv\n")
+    monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(config_mod, "_loaded", False)
+    monkeypatch.delenv("SOME_TEST_KEY", raising=False)
+
+    config_mod.load_env()
+
+    assert os.environ.get("SOME_TEST_KEY") == "from-dotenv"
+    monkeypatch.delenv("SOME_TEST_KEY", raising=False)
+
+
+def test_load_env_real_env_var_wins_over_dotenv(tmp_path, monkeypatch):
+    import preapproval.config as config_mod
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("SOME_TEST_KEY=from-dotenv\n")
+    monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(config_mod, "_loaded", False)
+    monkeypatch.setenv("SOME_TEST_KEY", "from-real-shell")
+
+    config_mod.load_env()
+
+    assert os.environ.get("SOME_TEST_KEY") == "from-real-shell"
+    monkeypatch.delenv("SOME_TEST_KEY", raising=False)
+
+
+def test_load_env_noop_when_no_dotenv_file(tmp_path, monkeypatch):
+    import preapproval.config as config_mod
+
+    monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(config_mod, "_loaded", False)
+
+    config_mod.load_env()  # must not raise even though tmp_path/.env doesn't exist

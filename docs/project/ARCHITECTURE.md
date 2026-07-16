@@ -98,8 +98,24 @@ Entry points: `db.list_reviews()` returns all reviews (newest first); `db.get_ev
   only provider/item/URL/fee are; a redaction step before the API call, a
   BAA-covered arrangement, encrypted storage, and per-user access control
   would be required before real forms are used.
-- **Secrets:** the Anthropic key comes from `ANTHROPIC_API_KEY` only; never
-  written to disk, logs, or reports. Nothing else authenticates.
+- **Secrets & configuration:** `preapproval/config.py:load_env()` loads a
+  local `.env` file (git-ignored — see `.env.example` for the template) at
+  the top of both entry points (`cli.py:main()`, `web/app.py:create_app()`).
+  This is a **local-development convenience only**:
+  - `load_dotenv(..., override=False)` — a real environment variable already
+    set (by the shell, a systemd unit, a container, a secrets manager) always
+    wins over `.env`, so `.env` can never silently shadow a production
+    secret.
+  - `.env` itself, and any `.env.*` variant, is git-ignored; only
+    `.env.example` (values blank, template only) is committed. This repo is
+    **public**, so nothing with a real value in it may ever be committed.
+  - **Production should not use a `.env` file at all** — set
+    `ANTHROPIC_API_KEY` (and any future third-party keys) as real environment
+    variables through the deployment platform's own secrets mechanism.
+    `load_env()` is a silent no-op when no `.env` file is present, so this is
+    always safe to leave in place.
+  - The key is never written to disk, logs, or reports regardless of how
+    it's supplied. Nothing else in the app authenticates against anything.
 - **Serving evidence safely:** report/evidence routes resolve paths and
   refuse anything outside `outputs/` (no path traversal).
 - **Browser blast radius:** the research browser is headless, isolated per

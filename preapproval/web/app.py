@@ -20,6 +20,7 @@ from fastapi import FastAPI, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from ..logging_config import REPO_ROOT, setup_logging
 from ..models import VerificationResult, format_category
@@ -71,7 +72,7 @@ def _list_completed_reviews() -> List[Dict[str, str]]:
                 "name": result_json.parent.name,
                 "participant": r.participant_name,
                 "category": format_category(r.category),
-                "provider": r.provider_name,
+                "provider": r.provider_name or "— (not stated)",
                 "review_date": result.review_timestamp,
             }
         )
@@ -91,6 +92,9 @@ def _safe_report_dir(name: str) -> Optional[Path]:
 
 
 def create_app() -> FastAPI:
+    from ..config import load_env
+
+    load_env()  # picks up .env for local dev; real env vars always win
     setup_logging()
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -227,22 +231,15 @@ def create_app() -> FastAPI:
             return JSONResponse({"error": "Could not read job status."}, status_code=500)
 
     @app.post("/jobs/{job_id}/clarify")
-    async def clarify(
-        request: Request,
-        job_id: str,
-        url: str = Form(default=""),
-        provider_name: str = Form(default=""),
-        requested_item: str = Form(default=""),
-        category: str = Form(default=""),
-    ):
+    async def clarify(request: Request, job_id: str):
         try:
+            # Read the submitted form generically so ANY field name the browser
+            # sends reaches resume_after_clarification — no hardcoded allow-list
+            # that would silently drop fields FastAPI doesn't recognize.
+            form = await request.form()
             corrections = {
-                "url": url,
-                "provider_name": provider_name,
-                "requested_item": requested_item,
-                "category": category,
+                k: str(v) for k, v in form.items() if str(v).strip()
             }
-            corrections = {k: v for k, v in corrections.items() if v and v.strip()}
             if not jobs.resume_after_clarification(job_id, corrections):
                 return error_page(
                     request,
@@ -329,7 +326,9 @@ def create_app() -> FastAPI:
                 result = VerificationResult.model_validate_json(
                     (report_dir / "result.json").read_text()
                 )
-                reply, updated = chat.rule_based_reply(message, result, report_dir)
+                reply, updated = await run_in_threadpool(
+                    chat.rule_based_reply, message, result, report_dir
+                )
                 return JSONResponse({"reply": reply, "updated": updated})
 
             import anthropic
@@ -378,7 +377,7 @@ def create_app() -> FastAPI:
                 # Always regenerate the report files after any tool use.
                 from ..report import write_report
 
-                write_report(result, report_dir)
+                await run_in_threadpool(write_report, result, report_dir)
 
             return JSONResponse({"reply": "\n\n".join(reply_parts) or "(done)", "updated": updated})
         except Exception:  # noqa: BLE001

@@ -39,8 +39,21 @@ You need: **Python 3.10+**. An **Anthropic API key** ([console.anthropic.com](ht
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
-export ANTHROPIC_API_KEY=sk-ant-...  # Optional; unlocks the AI-assisted engine and free-form chat
+
+# Optional — only needed for the AI-assisted engine and free-form chat.
+cp .env.example .env
+# then edit .env and set ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+`.env` is loaded automatically (via `preapproval.config.load_env()`) and is
+**git-ignored — never commit it**. It's a local-development convenience only;
+a real environment variable you've already set always takes precedence over
+whatever's in `.env`, and in production you should set secrets through your
+deployment platform's own mechanism rather than shipping a `.env` file at
+all. See `docs/project/ARCHITECTURE.md` → Secrets & configuration.
+
+If you'd rather not use a file, `export ANTHROPIC_API_KEY=sk-ant-...` works
+exactly as before.
 
 ### Web app (recommended)
 

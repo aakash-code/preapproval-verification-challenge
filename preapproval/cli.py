@@ -28,13 +28,12 @@ def _out_name(pdf: Path) -> str:
 
 def _prompt_ambiguous_fields(request, ambiguous_fields: List[str]) -> None:
     """Interactively confirm/correct ambiguous fields on ``request`` in place."""
-    from .models import Category
+    from .models import (
+        AMBIGUOUS_FIELD_PROMPTS,
+        Category,
+        apply_ambiguous_field_correction,
+    )
 
-    _PROMPTS = {
-        "url": "The website link could not be confidently read from the form. Enter it now (or press Enter to leave blank and mark this Needs Review): ",
-        "provider_name": "The provider/vendor name could not be confidently read. Enter it now (or press Enter to skip): ",
-        "requested_item": "The requested item/class/service could not be confidently read. Enter it now (or press Enter to skip): ",
-    }
     for field_name in ambiguous_fields:
         if field_name == "category":
             valid = ", ".join(c.value for c in Category)
@@ -47,22 +46,20 @@ def _prompt_ambiguous_fields(request, ambiguous_fields: List[str]) -> None:
                 value = input(prompt).strip()
                 if not value:
                     break
-                try:
-                    request.category = Category(value)
+                if apply_ambiguous_field_correction(request, "category", value):
                     logger.info("      reviewer-confirmed category: %s", value)
                     break
-                except ValueError:
-                    if attempt == 0:
-                        print(f"  '{value}' is not a valid category id. Try again.")
-                    else:
-                        logger.warning(
-                            "      invalid category %r; keeping default %s",
-                            value, request.category.value,
-                        )
+                if attempt == 0:
+                    print(f"  '{value}' is not a valid category id. Try again.")
+                else:
+                    logger.warning(
+                        "      invalid category %r; keeping default %s",
+                        value, request.category.value,
+                    )
             continue
-        value = input(_PROMPTS[field_name]).strip()
-        if value:
-            setattr(request, field_name, value)
+        hint = AMBIGUOUS_FIELD_PROMPTS.get(field_name, f"Enter {field_name}")
+        value = input(f"{hint} Enter it now (or press Enter to skip): ").strip()
+        if apply_ambiguous_field_correction(request, field_name, value):
             logger.info("      reviewer-confirmed %s: %s", field_name, value)
 
 
@@ -98,7 +95,10 @@ def _run_review(pdf: Path, out_dir: Path, client, headed: bool, engine: str,
 
     logger.info(
         "      %s: %r @ %s — %s",
-        request.category.value, request.requested_item, request.provider_name, request.url,
+        request.category.value,
+        request.requested_item or "(not stated)",
+        request.provider_name or "(not stated)",
+        request.url,
     )
     if request.extraction_notes:
         logger.info("      note: %s", request.extraction_notes)
@@ -177,6 +177,10 @@ def _rule_based_chat_loop(report_dir: Path) -> int:
 
 
 def main(argv=None) -> int:
+    from .config import load_env
+
+    load_env()  # picks up .env for local dev; real env vars always win
+
     parser = argparse.ArgumentParser(prog="preapproval", description="Pre-approval website-verification tool")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
